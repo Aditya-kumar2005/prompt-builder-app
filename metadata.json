@@ -1,0 +1,6 @@
+{
+  "name": "Template Studio & Canva Prompt Generator",
+  "description": "An interactive workspace to preview web layout templates and dynamically generate optimized Canva design prompts and localized website copy using Gemini AI.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
