@@ -1,25 +1,26 @@
 import React, { useState, useEffect } from "react";
 import { 
   Sparkle, 
-  LayoutTemplate, 
   Wand2, 
   Settings as SettingsIcon, 
   RotateCcw, 
   Check, 
   Cpu,
-  Globe
+  Globe,
+  Home,
+  LayoutTemplate
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { AISettings, DEFAULT_AI_SETTINGS } from "./types/ai";
-import { TemplateStudioTab } from "./components/TemplateStudioTab";
 import { PromptBuilderTab } from "./components/PromptBuilderTab";
 import { SettingsTab } from "./components/SettingsTab";
 import { WebsiteBuilderTab } from "./components/website-builder/WebsiteBuilderTab";
+import { LandingPage } from "./components/LandingPage";
 
-type ActiveView = "builder" | "templates" | "prompt_builder" | "settings";
+type ActiveView = "home" | "builder" | "prompt_builder" | "settings";
 
 export default function App() {
-  const [currentView, setCurrentView] = useState<ActiveView>("builder");
+  const [currentView, setCurrentView] = useState<ActiveView>("home");
 
   // Load and persist AI settings in localStorage
   const [aiSettings, setAiSettings] = useState<AISettings>(() => {
@@ -90,27 +91,44 @@ export default function App() {
       <header className="border-b border-slate-900 bg-slate-950/80 backdrop-blur-md sticky top-0 z-40 px-4 sm:px-6 py-3.5 flex flex-wrap items-center justify-between gap-4">
         
         {/* Brand identity */}
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-purple-600/20 shrink-0">
+        <div
+          onClick={() => setCurrentView("home")}
+          className="flex items-center gap-3 cursor-pointer group"
+          title="Return to SiteCraft Studio Overview"
+        >
+          <div className="w-9 h-9 bg-gradient-to-tr from-purple-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-purple-600/25 shrink-0 group-hover:scale-105 transition-transform">
             <Sparkle className="w-4.5 h-4.5 text-white animate-pulse" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="font-bold text-sm tracking-tight text-white md:text-base">
-                Template Studio & Prompt Builder
+              <h1 className="font-extrabold text-sm tracking-tight text-white md:text-base group-hover:text-indigo-300 transition-colors">
+                SiteCraft Studio
               </h1>
               <span className="bg-purple-500/10 border border-purple-500/20 text-purple-400 text-[10px] px-2 py-0.5 rounded-full font-mono hidden sm:inline">
-                AI Multi-Engine
+                AI Web &amp; Prompts
               </span>
             </div>
             <p className="text-[11px] text-slate-400 hidden md:block">
-              Web Layout Previews + Gemini, Claude & OpenAI Universal Prompt Studio
+              Live Google Stitch Website Builder + Multi-Engine Visual Prompt Studio
             </p>
           </div>
         </div>
 
         {/* Center View Selector Navigation Tabs */}
-        <nav className="flex items-center gap-1 bg-slate-900/90 p-1 rounded-xl border border-slate-850">
+        <nav className="flex items-center gap-1 bg-slate-900/90 p-1 rounded-xl border border-slate-850 shadow-md">
+          <button
+            type="button"
+            onClick={() => setCurrentView("home")}
+            className={`px-3 sm:px-4 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer ${
+              currentView === "home"
+                ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-600/20"
+                : "text-slate-400 hover:text-white hover:bg-slate-800/50"
+            }`}
+          >
+            <Home className="w-3.5 h-3.5" />
+            <span>Overview</span>
+          </button>
+
           <button
             type="button"
             onClick={() => setCurrentView("builder")}
@@ -121,20 +139,10 @@ export default function App() {
             }`}
           >
             <Globe className="w-3.5 h-3.5" />
-            <span>Live Website Builder</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setCurrentView("templates")}
-            className={`px-3 sm:px-4 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer ${
-              currentView === "templates"
-                ? "bg-purple-600 text-white shadow-md shadow-purple-600/20"
-                : "text-slate-400 hover:text-white hover:bg-slate-800/50"
-            }`}
-          >
-            <LayoutTemplate className="w-3.5 h-3.5" />
-            <span>Layout Templates</span>
+            <span>Website &amp; Layout Studio</span>
+            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-300 hidden md:inline">
+              Merged
+            </span>
           </button>
 
           <button
@@ -184,16 +192,15 @@ export default function App() {
 
       {/* Main View Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {currentView === "builder" && (
-          <WebsiteBuilderTab />
+        {currentView === "home" && (
+          <LandingPage 
+            onNavigate={setCurrentView}
+            hasApiKeys={Boolean(aiSettings.claudeKey || aiSettings.openaiKey || aiSettings.geminiKey)}
+          />
         )}
 
-        {currentView === "templates" && (
-          <TemplateStudioTab 
-            settings={aiSettings}
-            triggerToast={triggerToast}
-            onNavigateToSettings={() => setCurrentView("settings")}
-          />
+        {currentView === "builder" && (
+          <WebsiteBuilderTab />
         )}
 
         {currentView === "prompt_builder" && (

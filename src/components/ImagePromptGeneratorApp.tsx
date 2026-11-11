@@ -250,6 +250,110 @@ export const ImagePromptGeneratorApp: React.FC<ImagePromptGeneratorAppProps> = (
     } catch {}
   };
 
+  // Export all 4 generated variations at once into formatted text/markdown/json file
+  const handleExportAll = (format: 'txt' | 'md' | 'json' = 'txt') => {
+    if (!variations || variations.length === 0) {
+      triggerToast('No generated variations to export yet.', 'error');
+      return;
+    }
+
+    const timestamp = new Date().toISOString().split('T')[0];
+    let fileContent = '';
+    const fileName = `sitecraft-image-prompts-${targetEngine}-${timestamp}.${format}`;
+    let mimeType = 'text/plain';
+
+    if (format === 'json') {
+      mimeType = 'application/json';
+      fileContent = JSON.stringify(
+        {
+          metadata: {
+            generator: 'SiteCraft Visual Image Prompt Studio',
+            targetEngine,
+            subject,
+            artStyle,
+            aspectRatio,
+            exportedAt: new Date().toISOString(),
+          },
+          variations,
+          creativeTips,
+        },
+        null,
+        2
+      );
+    } else if (format === 'md') {
+      fileContent = `# SiteCraft Visual Image Prompts Export\n\n` +
+        `**Target Model**: ${targetEngine.toUpperCase()}\n` +
+        `**Subject / Concept**: ${subject}\n` +
+        `**Art Style**: ${artStyle} | **Aspect Ratio**: ${aspectRatio}\n` +
+        `**Export Date**: ${timestamp}\n\n` +
+        `---\n\n` +
+        variations
+          .map(
+            (v, idx) =>
+              `## Variation ${idx + 1}: ${v.styleLabel}\n\n` +
+              `### Prompt:\n\`\`\`text\n${v.fullPrompt}\n\`\`\`\n\n` +
+              (v.negativePrompt ? `### Negative Prompt:\n\`\`\`text\n${v.negativePrompt}\n\`\`\`\n\n` : '') +
+              `### Parameters & Breakdown:\n` +
+              `- **Engine Parameters**: \`${v.engineParameters}\`\n` +
+              `- **Camera**: ${v.breakdown.camera}\n` +
+              `- **Lighting**: ${v.breakdown.lighting}\n` +
+              `- **Color Mood**: ${v.breakdown.colorPalette}\n` +
+              `- **Composition**: ${v.breakdown.composition}\n\n` +
+              `> *Rationale*: ${v.rationale}\n\n` +
+              `---\n`
+          )
+          .join('\n');
+    } else {
+      // Default formatted .txt file for easy import into prompt management tools
+      const separator = '='.repeat(80);
+      const subSeparator = '-'.repeat(80);
+
+      fileContent =
+        `${separator}\n` +
+        `SITECRAFT IMAGE PROMPT EXPORT - 4 GENERATED VARIATIONS\n` +
+        `Target AI Engine : ${targetEngine.toUpperCase()}\n` +
+        `Core Subject     : "${subject}"\n` +
+        `Art Style        : ${artStyle}\n` +
+        `Aspect Ratio     : ${aspectRatio}\n` +
+        `Export Date      : ${new Date().toLocaleString()}\n` +
+        `${separator}\n\n` +
+        variations
+          .map(
+            (v, idx) =>
+              `[VARIATION ${idx + 1}] ${v.styleLabel.toUpperCase()}\n` +
+              `${subSeparator}\n` +
+              `PROMPT:\n${v.fullPrompt}\n\n` +
+              (v.negativePrompt ? `NEGATIVE PROMPT:\n${v.negativePrompt}\n\n` : '') +
+              `ENGINE PARAMETERS:\n${v.engineParameters}\n\n` +
+              `TECHNICAL BREAKDOWN:\n` +
+              `• Camera Optics  : ${v.breakdown.camera}\n` +
+              `• Lighting Style : ${v.breakdown.lighting}\n` +
+              `• Color Palette  : ${v.breakdown.colorPalette}\n` +
+              `• Composition    : ${v.breakdown.composition}\n\n` +
+              `RATIONALE:\n"${v.rationale}"\n\n`
+          )
+          .join(`${separator}\n\n`) +
+        (creativeTips.length > 0
+          ? `${separator}\nCREATIVE ENGINE TIPS:\n` +
+            creativeTips.map((tip, i) => `${i + 1}. ${tip}`).join('\n') +
+            `\n${separator}\n`
+          : '');
+    }
+
+    // Trigger file download
+    const blob = new Blob([fileContent], { type: `${mimeType};charset=utf-8` });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    triggerToast(`Exported all 4 variations to ${fileName}!`, 'success');
+  };
+
   return (
     <div className="space-y-6">
       {/* Top Banner & Target Engine Selector */}
@@ -498,15 +602,32 @@ export const ImagePromptGeneratorApp: React.FC<ImagePromptGeneratorAppProps> = (
 
         {/* Right Column: Generated 4-Way Variations (5 Cols) */}
         <div className="lg:col-span-5 space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
               <Layers className="w-4 h-4 text-purple-400" />
               <span>Prompt Variations Showcase</span>
             </h3>
             {variations && (
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-950/80 border border-purple-500/30 text-purple-300">
-                4 Variations Ready
-              </span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-950/80 border border-purple-500/30 text-purple-300">
+                  4 Variations Ready
+                </span>
+                <button
+                  onClick={() => handleExportAll('txt')}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold shadow-md shadow-purple-600/30 transition-all cursor-pointer"
+                  title="Export all 4 generated variations at once into a formatted text file (.txt) for external prompt management tools"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Export All (.TXT)</span>
+                </button>
+                <button
+                  onClick={() => handleExportAll('md')}
+                  className="flex items-center px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-medium border border-slate-700 transition-colors cursor-pointer"
+                  title="Export all variations into Markdown (.md) format"
+                >
+                  <span>.MD</span>
+                </button>
+              </div>
             )}
           </div>
 

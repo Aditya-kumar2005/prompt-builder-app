@@ -19,6 +19,7 @@ import { SiteLayers } from './SiteLayers';
 import { SiteInspector } from './SiteInspector';
 import { generateStandaloneHtml } from './exportHtml';
 import { BrandKitModal, GeneratedBrandKit } from './BrandKitModal';
+import { TemplateGalleryModal } from './TemplateGalleryModal';
 import {
   Code,
   Download,
@@ -26,6 +27,7 @@ import {
   EyeOff,
   FolderOpen,
   Laptop,
+  LayoutTemplate,
   Palette,
   Redo2,
   Save,
@@ -36,6 +38,9 @@ import {
 } from 'lucide-react';
 
 export const WebsiteBuilderTab: React.FC = () => {
+  // Modal for browsing 10+ layout templates
+  const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+
   // Main project state with initial Web Developer template
   const [project, setProject] = useState<SiteProject>(() => {
     try {
@@ -480,6 +485,21 @@ export const WebsiteBuilderTab: React.FC = () => {
               <Redo2 className="w-4 h-4" />
             </button>
           </div>
+
+          <div className="h-4 w-[1px] bg-slate-800" />
+
+          {/* Layout Templates Gallery Switcher */}
+          <button
+            onClick={() => setIsTemplateModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900/90 hover:bg-slate-800 text-slate-200 hover:text-white border border-slate-700/80 rounded-xl text-xs font-semibold shadow-sm transition-all cursor-pointer"
+            title="Browse and switch between 10+ pre-built layout archetypes"
+          >
+            <LayoutTemplate className="w-3.5 h-3.5 text-indigo-400" />
+            <span className="hidden sm:inline">Templates</span>
+            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+              10+
+            </span>
+          </button>
         </div>
 
         {/* Center: Device Viewport Switcher & Preview Toggle */}
@@ -668,6 +688,14 @@ export const WebsiteBuilderTab: React.FC = () => {
         onApplyCompleteKit={handleApplyCompleteKit}
         onAddFloatingLogo={handleAddFloatingLogo}
         showToast={showToast}
+      />
+
+      {/* 10+ Layout Archetypes Gallery Modal */}
+      <TemplateGalleryModal
+        isOpen={isTemplateModalOpen}
+        onClose={() => setIsTemplateModalOpen(false)}
+        activeTemplateId={project.tid}
+        onSelectTemplate={handleApplyTemplate}
       />
     </div>
   );
