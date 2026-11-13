@@ -160,8 +160,8 @@ export const ThreeLogoViewer: React.FC<ThreeLogoViewerProps> = ({
     const logoGroup = new THREE.Group();
     scene.add(logoGroup);
 
-    const pColor = new THREE.Color(data.primaryColor || '#6366f1');
-    const sColor = new THREE.Color(data.secondaryColor || '#06b6d4');
+    const pColor = new THREE.Color(data.primaryColor || '#2563eb');
+    const sColor = new THREE.Color(data.secondaryColor || '#38bdf8');
     const aColor = new THREE.Color(data.accentColor || '#ffffff');
     const metalness = data.metalness ?? 0.85;
     const roughness = data.roughness ?? 0.18;
@@ -461,16 +461,20 @@ export const ThreeLogoViewer: React.FC<ThreeLogoViewerProps> = ({
 
       {/* Interactive Controls Overlay */}
       {showControls && (
-        <div className="absolute bottom-2 inset-x-2 flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-slate-900/90 border border-slate-700/80 text-[11px] text-slate-300 backdrop-blur-md">
+        <div
+          onClick={e => e.stopPropagation()}
+          className="absolute bottom-2 inset-x-2 flex items-center justify-between px-2.5 py-1.5 rounded-md bg-zinc-900/90 border border-zinc-800 text-[11px] text-zinc-300 backdrop-blur-md"
+        >
           <button
+            type="button"
             onClick={() => setIsRotating(!isRotating)}
-            className="flex items-center gap-1 px-2 py-0.5 rounded hover:bg-slate-800 text-slate-200 transition-colors"
+            className="flex items-center gap-1 px-2 py-0.5 rounded hover:bg-zinc-800 text-zinc-200 transition-colors cursor-pointer"
           >
-            <span>{isRotating ? '⏸ Pause' : '▶ Orbit'}</span>
+            <span>{isRotating ? 'Pause' : 'Orbit'}</span>
           </button>
 
           <div className="flex items-center gap-1.5">
-            <span className="text-[10px] text-slate-400">Deconstruct</span>
+            <span className="text-[10px] text-zinc-400">Explode</span>
             <input
               type="range"
               min="0"
@@ -482,7 +486,7 @@ export const ThreeLogoViewer: React.FC<ThreeLogoViewerProps> = ({
                 setExploded(val);
                 if (onExplodeChange) onExplodeChange(val);
               }}
-              className="w-16 accent-indigo-500 cursor-pointer"
+              className="w-16 accent-blue-600 cursor-pointer"
             />
           </div>
         </div>

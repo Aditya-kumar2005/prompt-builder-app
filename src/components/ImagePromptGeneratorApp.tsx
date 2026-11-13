@@ -1,34 +1,31 @@
 /**
  * ImagePromptGeneratorApp Component
- * Dedicated visual prompt studio for Midjourney v6.1, DALL-E 3, Flux.1, Canva Magic Media, and Imagen 3.
- * Features visual attribute selectors, 4-way prompt variation expansion, negative prompts, and one-click copy.
+ * Visual prompt workstation for Midjourney v6.1, DALL-E 3, Flux.1, Canva Magic Media, and Imagen 3.
+ * Supports multi-variation prompt generation, negative prompt exclusions, and batch export (.TXT, .MD, .JSON).
  */
 import React, { useState } from 'react';
 import {
-  Palette,
-  Sparkles,
-  Camera,
-  Sun,
-  Layers,
-  Copy,
-  Check,
-  Dices,
-  Eye,
-  Sliders,
+  AlertCircle,
   Bookmark,
   BookmarkCheck,
+  Camera,
+  Check,
+  Copy,
+  Dices,
   Download,
-  Terminal,
-  Zap,
   Info,
-  Maximize2,
+  Layers,
+  Palette,
   RefreshCw,
+  Sun,
+  Wand2,
 } from 'lucide-react';
-import { AISettings } from '../types/ai';
+import { AISettings, getActiveCredential } from '../types/ai';
 
 interface ImagePromptGeneratorAppProps {
   settings: AISettings;
   triggerToast: (message: string, type?: 'success' | 'error' | 'info') => void;
+  onOpenSettings?: () => void;
 }
 
 interface PromptVariation {
@@ -48,99 +45,89 @@ interface PromptVariation {
 }
 
 const TARGET_ENGINES = [
-  { id: 'midjourney', name: 'Midjourney v6.1', badge: 'Parameters & Flags', desc: 'Adds --ar, --v 6.1, --style raw, and stylize flags' },
-  { id: 'dalle3', name: 'DALL-E 3', badge: 'Hyper-detailed Descriptive', desc: 'Rich narrative scenes for OpenAI image models' },
-  { id: 'flux', name: 'Flux.1 Schnell / Dev', badge: 'Next-Gen Open Weights', desc: 'High typography & prompt fidelity optimization' },
-  { id: 'canva', name: 'Canva Magic Media', badge: 'Commercial Ready', desc: 'Punchy commercial assets & website hero banners' },
-  { id: 'imagen', name: 'Google Imagen 3', badge: 'Photoreal Nuance', desc: 'Photorealistic textures and accurate lighting physics' },
+  { id: 'midjourney', name: 'Midjourney v6.1', meta: 'Parameters & Flags', desc: 'Adds --ar, --v 6.1, --style raw, and stylize flags' },
+  { id: 'dalle3', name: 'DALL-E 3', meta: 'Descriptive Prose', desc: 'High-detail narrative scenes for OpenAI image models' },
+  { id: 'flux', name: 'Flux.1 Dev', meta: 'Prompt Fidelity', desc: 'Structured compositions and embedded typography accuracy' },
+  { id: 'canva', name: 'Canva Magic Media', meta: 'Commercial Clean', desc: 'Hero visuals, editorial mockups, and brand assets' },
+  { id: 'imagen', name: 'Google Imagen 3', meta: 'Photoreal Optics', desc: 'Natural materials, lens physics, and balanced grain' },
 ];
 
 const ART_STYLES = [
-  'Hyperrealistic 3D Octane Render',
   '35mm Analog Film (Kodak Portra 400)',
+  'Architectural Product Photography',
   'Cinematic Film Still (Anamorphic)',
-  'Anime / Makoto Shinkai Aesthetic',
-  'Macro Nature Photography',
-  'Isometric 3D Low-Poly',
-  'Digital Concept Art (Matte Painting)',
-  'Cyberpunk Synthwave Neon',
-  'Claymation & Tactile Stop-Motion',
-  'Minimalist Vector Flat Illustration',
+  'Hyperrealistic 3D Render',
+  'Macro Material Photography',
+  'Isometric 3D Architectural',
   'Editorial Fashion Photography',
-  'Dark Fantasy Oil Painting',
+  'Minimalist Vector Illustration',
+  'Digital Matte Concept Art',
+  'Tactile Claymation Diorama',
 ];
 
 const CAMERAS = [
-  '85mm f/1.4 Lens, Creamy Bokeh Depth',
-  '24mm Ultra-Wide Cinematic Angle',
+  '85mm f/1.4 Lens, Shallow Depth of Field',
+  '24mm Wide-Angle Architectural Shift',
   '100mm Macro Close-Up Focus',
-  'Drone Top-Down Aerial View',
-  'Low-Angle Dramatic Hero Perspective',
+  'Top-Down Overhead Flatlay',
+  'Low-Angle Hero Perspective',
   'Medium Format Hasselblad 100MP',
-  'Telephoto 200mm Compressed Depth',
-  'GoPro Action Fisheye POV',
 ];
 
 const LIGHTINGS = [
-  'Volumetric Golden Hour Sunburst Rays',
-  'Cyberpunk Neon Rim Light & Glow',
-  'Studio Softbox Three-Point Lighting',
-  'Moody Noir Chiaroscuro & Deep Shadows',
-  'Bioluminescent Ethereal Glow',
-  'Soft Overcast Diffused Daylight',
-  'Harsh Noon Sunlight with Sharp Geometry',
-  'Candlelit Warm Flame Ambient',
+  'Volumetric Golden Hour Sunlight',
+  'Soft Overhead Studio Softbox',
+  'Moody Chiaroscuro Side Key',
+  'Overcast Diffused Natural Daylight',
+  'Harsh Noon Sun with Geometric Shadows',
+  'Warm Tungsten Interior Ambient',
 ];
 
 const COLOR_MOODS = [
-  'Teal & Orange Hollywood Cinema',
-  'Vibrant Technicolor Saturated',
-  'Monochromatic High-Contrast Noir',
-  'Pastel Dreamscape (Muted & Soft)',
-  'Vintage 80s Kodachrome Film',
-  'Iridescent Holographic Prism',
-  'Emerald Green & Rich Gold Luxury',
-  'Cyber Midnight Ultraviolet',
+  'Muted Warm Earth & Slate',
+  'Teal & Amber Natural Cinema',
+  'Monochrome High-Contrast Noir',
+  'Kodachrome 1970s Film Stock',
+  'Clean Neutral Titanium & Bone',
+  'Soft Nordic Pastels',
 ];
 
 const ASPECT_RATIOS = [
-  { id: '16:9', label: '16:9 Landscape', desc: 'Website Hero / YouTube' },
-  { id: '1:1', label: '1:1 Square', desc: 'Instagram / Avatar' },
-  { id: '9:16', label: '9:16 Vertical', desc: 'Reels / TikTok / Mobile' },
-  { id: '4:5', label: '4:5 Portrait', desc: 'Social Post Feed' },
-  { id: '21:9', label: '21:9 Ultrawide', desc: 'Cinematic Panoramic' },
-  { id: '3:2', label: '3:2 Classic', desc: '35mm Camera Ratio' },
+  { id: '16:9', label: '16:9 Landscape' },
+  { id: '1:1', label: '1:1 Square' },
+  { id: '9:16', label: '9:16 Vertical' },
+  { id: '4:5', label: '4:5 Portrait' },
+  { id: '21:9', label: '21:9 Cinema' },
+  { id: '3:2', label: '3:2 Classic' },
 ];
 
 const SURPRISE_INSPIRATIONS = [
-  'A translucent glass mechanical butterfly resting on a blooming cybernetic lotus with glowing circuit veins',
-  'Futuristic architectural villa suspended over a misty fjord with warm interior lights and obsidian slate roofs',
-  'Vintage 1980s astronaut enjoying a holographic coffee inside a neon-lit Tokyo ramen booth floating in space',
-  'Hyper-detailed luxury sneaker made of crystalline coral and liquid mercury floating in zero gravity',
-  'Isometric miniature laboratory inside a cutaway crystal geode with bubbling miniature chemistry vials',
-  'An ancient moss-covered marble statue overgrown with bioluminescent mushrooms in an enchanted midnight grove',
+  'Minimalist brutalist concrete pavilion cantilevered over a misty Nordic fjord at sunrise',
+  'Matte anodized aluminum audio console resting on walnut timber beside a rain-streaked studio window',
+  'Cutaway isometric architectural model of a botanical greenhouse crafted from basswood and brass',
+  'Overhead flatlay of vintage mechanical rangefinder camera disassembled cleanly on textured linen paper',
+  'Ceramic pour-over coffee carafe steaming in morning window light on honed travertine counter',
 ];
 
 export const ImagePromptGeneratorApp: React.FC<ImagePromptGeneratorAppProps> = ({
   settings,
   triggerToast,
+  onOpenSettings,
 }) => {
   const [subject, setSubject] = useState(
-    'A hyper-detailed mechanical hummingbird made of polished brass and emerald crystals, hovering over a neon flower'
+    'Precision anodized aluminum audio dial and warm oscilloscope trace resting on a dark walnut studio desk'
   );
   const [targetEngine, setTargetEngine] = useState('midjourney');
-  const [artStyle, setArtStyle] = useState('Hyperrealistic 3D Octane Render');
-  const [camera, setCamera] = useState('85mm f/1.4 Lens, Creamy Bokeh Depth');
-  const [lighting, setLighting] = useState('Volumetric Golden Hour Sunburst Rays');
-  const [colorMood, setColorMood] = useState('Teal & Orange Hollywood Cinema');
+  const [artStyle, setArtStyle] = useState('Architectural Product Photography');
+  const [camera, setCamera] = useState('85mm f/1.4 Lens, Shallow Depth of Field');
+  const [lighting, setLighting] = useState('Soft Overhead Studio Softbox');
+  const [colorMood, setColorMood] = useState('Muted Warm Earth & Slate');
   const [aspectRatio, setAspectRatio] = useState('16:9');
 
-  // Quality & negative tags
-  const [qualityFlags, setQualityFlags] = useState<string[]>([
-    '8k UHD',
-    'raytraced reflections',
-    'photorealistic tactile textures',
-    'volumetric light bloom',
+  const [qualityFlags] = useState<string[]>([
+    'high surface detail',
+    'natural grain',
+    'calibrated dynamic range',
   ]);
   const [negativePrompts, setNegativePrompts] = useState<string[]>([
     'blurry',
@@ -152,6 +139,7 @@ export const ImagePromptGeneratorApp: React.FC<ImagePromptGeneratorAppProps> = (
   ]);
 
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [variations, setVariations] = useState<PromptVariation[] | null>(null);
   const [creativeTips, setCreativeTips] = useState<string[]>([]);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -164,32 +152,29 @@ export const ImagePromptGeneratorApp: React.FC<ImagePromptGeneratorAppProps> = (
     }
   });
 
+  const cred = getActiveCredential(settings);
+  const missingCustomKey = cred.provider !== 'gemini' && !cred.apiKey;
+
   const handleRollDice = () => {
     const random = SURPRISE_INSPIRATIONS[Math.floor(Math.random() * SURPRISE_INSPIRATIONS.length)];
     setSubject(random);
-    triggerToast('🎲 Rolled random visual concept inspiration!', 'info');
+    triggerToast('Loaded new visual subject', 'info');
   };
 
   const handleGeneratePrompts = async () => {
     if (!subject.trim()) {
-      triggerToast('Please provide an image concept or subject.', 'error');
+      triggerToast('Enter an image subject or scene concept first.', 'error');
+      return;
+    }
+    if (missingCustomKey) {
+      const msg = `Add your ${cred.provider.toUpperCase()} API key in AI Settings before generating.`;
+      setErrorMsg(msg);
+      triggerToast(msg, 'error');
       return;
     }
 
     setLoading(true);
-
-    let activeKey = '';
-    let activeModel = '';
-    if (settings.activeProvider === 'gemini') {
-      activeKey = settings.geminiKey;
-      activeModel = settings.geminiModel;
-    } else if (settings.activeProvider === 'claude') {
-      activeKey = settings.claudeKey;
-      activeModel = settings.claudeModel;
-    } else if (settings.activeProvider === 'openai') {
-      activeKey = settings.openaiKey;
-      activeModel = settings.openaiModel;
-    }
+    setErrorMsg(null);
 
     try {
       const resp = await fetch('/api/image-prompt-craft', {
@@ -205,24 +190,25 @@ export const ImagePromptGeneratorApp: React.FC<ImagePromptGeneratorAppProps> = (
           aspectRatio,
           qualityFlags,
           negativePrompts,
-          provider: settings.activeProvider,
-          apiKey: activeKey,
-          model: activeModel,
+          provider: cred.provider,
+          apiKey: cred.apiKey,
+          model: cred.model,
           temperature: settings.temperature,
         }),
       });
 
       const res = await resp.json();
       if (!resp.ok || !res.success) {
-        throw new Error(res.error || 'Failed to craft image prompts.');
+        throw new Error(res.error || 'Failed to generate image prompts.');
       }
 
       setVariations(res.data.variations || []);
       setCreativeTips(res.data.creativeTips || []);
-      triggerToast('✨ 4 Master Image Prompts generated!', 'success');
+      triggerToast('Generated 4 image prompt variations', 'success');
     } catch (err: any) {
-      console.error(err);
-      triggerToast(err.message || 'Failed to craft image prompts.', 'error');
+      const msg = err.message || 'Failed to generate image prompts.';
+      setErrorMsg(msg);
+      triggerToast(msg, 'error');
     } finally {
       setLoading(false);
     }
@@ -231,18 +217,18 @@ export const ImagePromptGeneratorApp: React.FC<ImagePromptGeneratorAppProps> = (
   const handleCopyPrompt = (id: string, text: string) => {
     navigator.clipboard.writeText(text);
     setCopiedId(id);
-    triggerToast('Copied prompt to clipboard! Ready to paste into image AI.', 'success');
-    setTimeout(() => setCopiedId(null), 2500);
+    triggerToast('Prompt copied to clipboard', 'success');
+    setTimeout(() => setCopiedId(null), 2000);
   };
 
   const handleToggleSave = (promptText: string) => {
     let next: string[];
     if (savedPrompts.includes(promptText)) {
       next = savedPrompts.filter(p => p !== promptText);
-      triggerToast('Removed from saved image prompts', 'info');
+      triggerToast('Removed from saved prompts', 'info');
     } else {
       next = [promptText, ...savedPrompts];
-      triggerToast('Saved prompt to library!', 'success');
+      triggerToast('Saved image prompt', 'success');
     }
     setSavedPrompts(next);
     try {
@@ -250,10 +236,9 @@ export const ImagePromptGeneratorApp: React.FC<ImagePromptGeneratorAppProps> = (
     } catch {}
   };
 
-  // Export all 4 generated variations at once into formatted text/markdown/json file
   const handleExportAll = (format: 'txt' | 'md' | 'json' = 'txt') => {
     if (!variations || variations.length === 0) {
-      triggerToast('No generated variations to export yet.', 'error');
+      triggerToast('Generate variations before exporting.', 'error');
       return;
     }
 
@@ -267,7 +252,7 @@ export const ImagePromptGeneratorApp: React.FC<ImagePromptGeneratorAppProps> = (
       fileContent = JSON.stringify(
         {
           metadata: {
-            generator: 'SiteCraft Visual Image Prompt Studio',
+            generator: 'SiteCraft Image Prompt Studio',
             targetEngine,
             subject,
             artStyle,
@@ -281,41 +266,32 @@ export const ImagePromptGeneratorApp: React.FC<ImagePromptGeneratorAppProps> = (
         2
       );
     } else if (format === 'md') {
-      fileContent = `# SiteCraft Visual Image Prompts Export\n\n` +
-        `**Target Model**: ${targetEngine.toUpperCase()}\n` +
-        `**Subject / Concept**: ${subject}\n` +
-        `**Art Style**: ${artStyle} | **Aspect Ratio**: ${aspectRatio}\n` +
-        `**Export Date**: ${timestamp}\n\n` +
-        `---\n\n` +
+      fileContent = `# Image Prompts Export\n\n` +
+        `**Target Engine**: ${targetEngine.toUpperCase()}\n` +
+        `**Subject**: ${subject}\n` +
+        `**Style**: ${artStyle} | **Aspect Ratio**: ${aspectRatio}\n\n---\n\n` +
         variations
           .map(
             (v, idx) =>
               `## Variation ${idx + 1}: ${v.styleLabel}\n\n` +
-              `### Prompt:\n\`\`\`text\n${v.fullPrompt}\n\`\`\`\n\n` +
-              (v.negativePrompt ? `### Negative Prompt:\n\`\`\`text\n${v.negativePrompt}\n\`\`\`\n\n` : '') +
-              `### Parameters & Breakdown:\n` +
-              `- **Engine Parameters**: \`${v.engineParameters}\`\n` +
+              `\`\`\`text\n${v.fullPrompt}\n\`\`\`\n\n` +
+              (v.negativePrompt ? `**Negative**: ${v.negativePrompt}\n\n` : '') +
+              `- **Parameters**: \`${v.engineParameters}\`\n` +
               `- **Camera**: ${v.breakdown.camera}\n` +
-              `- **Lighting**: ${v.breakdown.lighting}\n` +
-              `- **Color Mood**: ${v.breakdown.colorPalette}\n` +
-              `- **Composition**: ${v.breakdown.composition}\n\n` +
-              `> *Rationale*: ${v.rationale}\n\n` +
-              `---\n`
+              `- **Lighting**: ${v.breakdown.lighting}\n\n---\n`
           )
           .join('\n');
     } else {
-      // Default formatted .txt file for easy import into prompt management tools
       const separator = '='.repeat(80);
       const subSeparator = '-'.repeat(80);
 
       fileContent =
         `${separator}\n` +
-        `SITECRAFT IMAGE PROMPT EXPORT - 4 GENERATED VARIATIONS\n` +
+        `SITECRAFT IMAGE PROMPT EXPORT - 4 VARIATIONS\n` +
         `Target AI Engine : ${targetEngine.toUpperCase()}\n` +
-        `Core Subject     : "${subject}"\n` +
-        `Art Style        : ${artStyle}\n` +
+        `Subject          : "${subject}"\n` +
+        `Style            : ${artStyle}\n` +
         `Aspect Ratio     : ${aspectRatio}\n` +
-        `Export Date      : ${new Date().toLocaleString()}\n` +
         `${separator}\n\n` +
         variations
           .map(
@@ -325,22 +301,14 @@ export const ImagePromptGeneratorApp: React.FC<ImagePromptGeneratorAppProps> = (
               `PROMPT:\n${v.fullPrompt}\n\n` +
               (v.negativePrompt ? `NEGATIVE PROMPT:\n${v.negativePrompt}\n\n` : '') +
               `ENGINE PARAMETERS:\n${v.engineParameters}\n\n` +
-              `TECHNICAL BREAKDOWN:\n` +
-              `• Camera Optics  : ${v.breakdown.camera}\n` +
-              `• Lighting Style : ${v.breakdown.lighting}\n` +
-              `• Color Palette  : ${v.breakdown.colorPalette}\n` +
-              `• Composition    : ${v.breakdown.composition}\n\n` +
-              `RATIONALE:\n"${v.rationale}"\n\n`
+              `CAMERA  : ${v.breakdown.camera}\n` +
+              `LIGHT   : ${v.breakdown.lighting}\n` +
+              `COLOR   : ${v.breakdown.colorPalette}\n` +
+              `NOTES   : ${v.rationale}\n\n`
           )
-          .join(`${separator}\n\n`) +
-        (creativeTips.length > 0
-          ? `${separator}\nCREATIVE ENGINE TIPS:\n` +
-            creativeTips.map((tip, i) => `${i + 1}. ${tip}`).join('\n') +
-            `\n${separator}\n`
-          : '');
+          .join(`${separator}\n\n`);
     }
 
-    // Trigger file download
     const blob = new Blob([fileContent], { type: `${mimeType};charset=utf-8` });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -351,102 +319,115 @@ export const ImagePromptGeneratorApp: React.FC<ImagePromptGeneratorAppProps> = (
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
 
-    triggerToast(`Exported all 4 variations to ${fileName}!`, 'success');
+    triggerToast(`Exported ${fileName}`, 'success');
   };
 
   return (
     <div className="space-y-6">
-      {/* Top Banner & Target Engine Selector */}
-      <div className="bg-gradient-to-r from-purple-950/60 via-indigo-950/40 to-slate-900 border border-purple-500/30 rounded-2xl p-5 shadow-xl">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-purple-600/30">
-              <Palette className="w-5 h-5" />
-            </div>
+      {missingCustomKey && (
+        <div className="p-3.5 rounded-lg border border-amber-500/40 bg-amber-950/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-200">
+          <div className="flex items-start gap-2.5">
+            <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
             <div>
-              <h2 className="text-base font-bold text-white flex items-center gap-2">
-                Image Prompt Generator Studio
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                  Visual AI Master
-                </span>
-              </h2>
-              <p className="text-xs text-slate-400">
-                Craft optimized prompts for Midjourney, DALL-E 3, Flux.1, Canva Magic Media, and Google Imagen
-              </p>
+              <span className="font-semibold text-amber-100 block">
+                {cred.provider === 'claude' ? 'Anthropic Claude' : 'OpenAI'} API key required
+              </span>
+              <span className="text-[11px] text-amber-200/80">
+                Your active provider has no saved key in localStorage. Add a key in Settings or switch to Gemini.
+              </span>
             </div>
           </div>
+          {onOpenSettings && (
+            <button
+              type="button"
+              onClick={onOpenSettings}
+              className="px-3 py-1.5 rounded-md bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-100 font-medium text-xs transition-colors cursor-pointer whitespace-nowrap self-start sm:self-center"
+            >
+              Open AI Settings
+            </button>
+          )}
+        </div>
+      )}
+      {/* Top Engine Selector */}
+      <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-5">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+          <div>
+            <h2 className="text-base font-semibold text-white">
+              Visual Image Prompt Studio
+            </h2>
+            <p className="text-xs text-zinc-400">
+              Compile camera-accurate prompt variations formatted for Midjourney, DALL-E 3, Flux, Canva, and Imagen 3
+            </p>
+          </div>
 
-          {/* Quick Dice Roller */}
           <button
+            type="button"
             onClick={handleRollDice}
-            className="self-start md:self-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-900/40 hover:bg-purple-900/60 text-purple-200 border border-purple-500/40 text-xs font-semibold shadow-sm transition-all cursor-pointer"
-            title="Roll random visual concept inspiration"
+            className="self-start md:self-auto flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 text-xs font-medium transition-colors cursor-pointer"
           >
-            <Dices className="w-4 h-4 text-purple-400 animate-spin-slow" />
-            <span>Surprise Me</span>
+            <Dices className="w-3.5 h-3.5 text-blue-400" />
+            <span>Random Concept</span>
           </button>
         </div>
 
-        {/* Target Engine Pills */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
           {TARGET_ENGINES.map(eng => {
             const isSelected = targetEngine === eng.id;
             return (
               <button
                 key={eng.id}
+                type="button"
                 onClick={() => setTargetEngine(eng.id)}
-                className={`p-3 rounded-xl border text-left transition-all ${
+                className={`p-3 rounded-lg border text-left transition-colors cursor-pointer ${
                   isSelected
-                    ? 'border-purple-500 bg-purple-950/80 text-white ring-1 ring-purple-500 shadow-lg'
-                    : 'border-slate-800 bg-slate-950/60 text-slate-400 hover:border-slate-700 hover:text-slate-200'
+                    ? 'border-blue-500 bg-zinc-950 text-white'
+                    : 'border-zinc-800 bg-zinc-950/50 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200'
                 }`}
               >
-                <div className="text-xs font-bold">{eng.name}</div>
-                <div className="text-[10px] text-purple-400 font-mono mt-0.5">{eng.badge}</div>
-                <div className="text-[10px] text-slate-500 mt-1 line-clamp-1">{eng.desc}</div>
+                <div className="text-xs font-semibold">{eng.name}</div>
+                <div className="text-[11px] text-blue-400 font-mono mt-0.5">{eng.meta}</div>
+                <div className="text-[11px] text-zinc-500 mt-1 line-clamp-1">{eng.desc}</div>
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* Main Form: Visual Attribute Matrix */}
+      {/* Main Split Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column: Subject & Parameters (7 Cols) */}
+        {/* Left Controls */}
         <div className="lg:col-span-7 space-y-4">
-          {/* Subject & Core Concept */}
-          <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 shadow-sm space-y-2">
+          <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4 space-y-2">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-                <span>Subject & Visual Concept</span>
+              <label className="text-xs font-semibold text-white">
+                Subject &amp; Scene Concept
               </label>
-              <span className="text-[11px] text-slate-400">Be descriptive with focal subject</span>
+              <span className="text-[11px] text-zinc-500 font-mono">Describe materials &amp; action</span>
             </div>
             <textarea
               rows={3}
               value={subject}
               onChange={e => setSubject(e.target.value)}
-              placeholder="Describe your subject, scene, character, product, or architectural concept..."
-              className="w-full bg-slate-950 border border-slate-800 focus:border-purple-500 rounded-xl p-3 text-xs text-white placeholder-slate-500 outline-none transition-colors"
+              placeholder="Describe your focal subject, setting, and surface textures..."
+              className="w-full bg-zinc-950 border border-zinc-800 focus:border-blue-500 rounded-md p-3 text-xs text-white placeholder-zinc-500 outline-none"
             />
           </div>
 
-          {/* Art Style Selector */}
-          <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 shadow-sm space-y-2">
-            <label className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-              <Palette className="w-3.5 h-3.5 text-indigo-400" />
-              <span>Art Style & Medium</span>
+          <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4 space-y-2">
+            <label className="text-xs font-semibold text-white flex items-center gap-1.5">
+              <Palette className="w-3.5 h-3.5 text-blue-400" />
+              <span>Medium &amp; Art Direction</span>
             </label>
-            <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pr-1">
+            <div className="flex flex-wrap gap-1.5">
               {ART_STYLES.map(style => (
                 <button
                   key={style}
+                  type="button"
                   onClick={() => setArtStyle(style)}
-                  className={`px-2.5 py-1 rounded-lg text-xs transition-all ${
+                  className={`px-2.5 py-1 rounded-md text-xs transition-colors cursor-pointer ${
                     artStyle === style
-                      ? 'bg-purple-600 text-white font-semibold shadow-sm'
-                      : 'bg-slate-950 border border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
+                      ? 'bg-blue-600 text-white font-medium'
+                      : 'bg-zinc-950 border border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:border-zinc-700'
                   }`}
                 >
                   {style}
@@ -455,18 +436,16 @@ export const ImagePromptGeneratorApp: React.FC<ImagePromptGeneratorAppProps> = (
             </div>
           </div>
 
-          {/* Camera Optics & Lighting Grids */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Camera */}
-            <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 shadow-sm space-y-2">
-              <label className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-                <Camera className="w-3.5 h-3.5 text-cyan-400" />
-                <span>Camera & Angle</span>
+            <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4 space-y-2">
+              <label className="text-xs font-semibold text-white flex items-center gap-1.5">
+                <Camera className="w-3.5 h-3.5 text-blue-400" />
+                <span>Camera Optics</span>
               </label>
               <select
                 value={camera}
                 onChange={e => setCamera(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-xs text-white outline-none"
+                className="w-full bg-zinc-950 border border-zinc-800 rounded-md p-2 text-xs text-white outline-none focus:border-blue-500"
               >
                 {CAMERAS.map(cam => (
                   <option key={cam} value={cam}>
@@ -476,16 +455,15 @@ export const ImagePromptGeneratorApp: React.FC<ImagePromptGeneratorAppProps> = (
               </select>
             </div>
 
-            {/* Lighting */}
-            <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 shadow-sm space-y-2">
-              <label className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-                <Sun className="w-3.5 h-3.5 text-amber-400" />
-                <span>Lighting & Atmosphere</span>
+            <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4 space-y-2">
+              <label className="text-xs font-semibold text-white flex items-center gap-1.5">
+                <Sun className="w-3.5 h-3.5 text-blue-400" />
+                <span>Lighting</span>
               </label>
               <select
                 value={lighting}
                 onChange={e => setLighting(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-xs text-white outline-none"
+                className="w-full bg-zinc-950 border border-zinc-800 rounded-md p-2 text-xs text-white outline-none focus:border-blue-500"
               >
                 {LIGHTINGS.map(light => (
                   <option key={light} value={light}>
@@ -496,15 +474,13 @@ export const ImagePromptGeneratorApp: React.FC<ImagePromptGeneratorAppProps> = (
             </div>
           </div>
 
-          {/* Color Mood & Aspect Ratio */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Color Palette Mood */}
-            <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 shadow-sm space-y-2">
-              <label className="text-xs font-bold text-white uppercase tracking-wider">Color Grade / Mood</label>
+            <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4 space-y-2">
+              <label className="text-xs font-semibold text-white">Color Palette</label>
               <select
                 value={colorMood}
                 onChange={e => setColorMood(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-xs text-white outline-none"
+                className="w-full bg-zinc-950 border border-zinc-800 rounded-md p-2 text-xs text-white outline-none focus:border-blue-500"
               >
                 {COLOR_MOODS.map(m => (
                   <option key={m} value={m}>
@@ -514,34 +490,33 @@ export const ImagePromptGeneratorApp: React.FC<ImagePromptGeneratorAppProps> = (
               </select>
             </div>
 
-            {/* Aspect Ratio Selector */}
-            <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 shadow-sm space-y-2">
-              <label className="text-xs font-bold text-white uppercase tracking-wider">Aspect Ratio</label>
+            <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4 space-y-2">
+              <label className="text-xs font-semibold text-white">Aspect Ratio</label>
               <div className="grid grid-cols-3 gap-1">
                 {ASPECT_RATIOS.map(ar => (
                   <button
                     key={ar.id}
+                    type="button"
                     onClick={() => setAspectRatio(ar.id)}
-                    className={`py-1.5 px-1 rounded-lg border text-center transition-all ${
+                    className={`py-1.5 px-1 rounded border text-center transition-colors cursor-pointer ${
                       aspectRatio === ar.id
-                        ? 'border-purple-500 bg-purple-950/50 text-white font-bold'
-                        : 'border-slate-800 bg-slate-950/60 text-slate-400 hover:text-slate-200'
+                        ? 'border-blue-500 bg-zinc-950 text-white font-semibold'
+                        : 'border-zinc-800 bg-zinc-950/60 text-zinc-400 hover:text-zinc-200'
                     }`}
                   >
-                    <div className="text-[11px] font-mono">{ar.id}</div>
+                    <div className="text-[11px] font-mono tabular-nums">{ar.id}</div>
                   </button>
                 ))}
               </div>
             </div>
           </div>
 
-          {/* Negative Prompts Filter */}
-          <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 shadow-sm space-y-2">
+          <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4 space-y-2">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-                Negative Constraints Filter (--no)
+              <label className="text-xs font-semibold text-zinc-300">
+                Negative Exclusions
               </label>
-              <span className="text-[10px] text-slate-500">Excluded artifacts</span>
+              <span className="text-[11px] text-zinc-500">Toggle excluded artifacts</span>
             </div>
             <div className="flex flex-wrap gap-1.5">
               {[
@@ -559,6 +534,7 @@ export const ImagePromptGeneratorApp: React.FC<ImagePromptGeneratorAppProps> = (
                 return (
                   <button
                     key={tag}
+                    type="button"
                     onClick={() => {
                       if (isIncluded) {
                         setNegativePrompts(negativePrompts.filter(t => t !== tag));
@@ -566,10 +542,10 @@ export const ImagePromptGeneratorApp: React.FC<ImagePromptGeneratorAppProps> = (
                         setNegativePrompts([...negativePrompts, tag]);
                       }
                     }}
-                    className={`px-2 py-0.5 rounded-lg text-[11px] border transition-all ${
+                    className={`px-2 py-0.5 rounded text-[11px] border transition-colors cursor-pointer ${
                       isIncluded
-                        ? 'bg-rose-950/40 border-rose-500/50 text-rose-300 font-medium'
-                        : 'bg-slate-950 border-slate-800 text-slate-500 hover:text-slate-300'
+                        ? 'bg-rose-950/30 border-rose-500/40 text-rose-300'
+                        : 'bg-zinc-950 border-zinc-800 text-zinc-500 hover:text-zinc-300'
                     }`}
                   >
                     {isIncluded ? '− ' : '+ '}
@@ -580,160 +556,167 @@ export const ImagePromptGeneratorApp: React.FC<ImagePromptGeneratorAppProps> = (
             </div>
           </div>
 
-          {/* Generate Button */}
+          {errorMsg && (
+            <div className="p-3 rounded-md border border-rose-500/40 bg-rose-950/20 flex items-start gap-2 text-xs text-rose-200">
+              <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+              <span className="font-mono text-[11px] leading-relaxed">{errorMsg}</span>
+            </div>
+          )}
+
           <button
+            type="button"
             onClick={handleGeneratePrompts}
             disabled={loading}
-            className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-sm shadow-xl shadow-purple-600/25 flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+            className="w-full py-3 px-4 rounded-md bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-50"
           >
             {loading ? (
               <>
                 <RefreshCw className="w-4 h-4 animate-spin" />
-                <span>Crafting 4 Master Image Prompts...</span>
+                <span>Generating 4 Variations via {cred.provider.toUpperCase()}...</span>
               </>
             ) : (
               <>
-                <Sparkles className="w-4 h-4" />
-                <span>Generate 4 Master Image Prompts with Gemini</span>
+                <Wand2 className="w-4 h-4" />
+                <span>Generate 4 Image Prompts ({cred.provider})</span>
               </>
             )}
           </button>
         </div>
 
-        {/* Right Column: Generated 4-Way Variations (5 Cols) */}
+        {/* Right Variations Output */}
         <div className="lg:col-span-5 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
-              <Layers className="w-4 h-4 text-purple-400" />
-              <span>Prompt Variations Showcase</span>
+            <h3 className="text-xs font-semibold text-white flex items-center gap-2">
+              <Layers className="w-4 h-4 text-blue-400" />
+              <span>Generated Variations</span>
             </h3>
             {variations && (
               <div className="flex items-center gap-1.5">
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-950/80 border border-purple-500/30 text-purple-300">
-                  4 Variations Ready
-                </span>
                 <button
+                  type="button"
                   onClick={() => handleExportAll('txt')}
-                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold shadow-md shadow-purple-600/30 transition-all cursor-pointer"
-                  title="Export all 4 generated variations at once into a formatted text file (.txt) for external prompt management tools"
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium transition-colors cursor-pointer"
+                  title="Export all 4 variations into a formatted text file"
                 >
                   <Download className="w-3.5 h-3.5" />
-                  <span>Export All (.TXT)</span>
+                  <span>Export .TXT</span>
                 </button>
                 <button
+                  type="button"
                   onClick={() => handleExportAll('md')}
-                  className="flex items-center px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-medium border border-slate-700 transition-colors cursor-pointer"
-                  title="Export all variations into Markdown (.md) format"
+                  className="px-2 py-1 rounded-md bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 text-xs font-medium transition-colors cursor-pointer"
                 >
-                  <span>.MD</span>
+                  .MD
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleExportAll('json')}
+                  className="px-2 py-1 rounded-md bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 text-xs font-medium transition-colors cursor-pointer"
+                >
+                  .JSON
                 </button>
               </div>
             )}
           </div>
 
           {!variations && !loading && (
-            <div className="bg-slate-900/40 border border-dashed border-slate-800 rounded-2xl p-8 text-center text-slate-500 flex flex-col items-center justify-center min-h-[380px]">
-              <div className="w-12 h-12 rounded-2xl bg-purple-950/40 border border-purple-500/20 flex items-center justify-center text-purple-400 mb-3">
-                <Camera className="w-6 h-6" />
+            <div className="bg-zinc-950 border border-zinc-800 rounded-lg p-8 text-center flex flex-col items-center justify-center min-h-[380px]">
+              <div className="w-11 h-11 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-blue-400 mb-3">
+                <Camera className="w-5 h-5" />
               </div>
-              <h4 className="text-sm font-semibold text-slate-300 mb-1">Visual Concept Engine Ready</h4>
-              <p className="text-xs text-slate-400 max-w-xs">
-                Select your parameters and click &ldquo;Generate 4 Master Image Prompts&rdquo; to receive tailored Midjourney, DALL-E 3, and Flux variations.
+              <h4 className="text-sm font-semibold text-zinc-200 mb-1">Variation Queue Empty</h4>
+              <p className="text-xs text-zinc-400 max-w-xs leading-relaxed">
+                Select camera optics and target engine on the left, then generate 4 structured prompt variations with batch export.
               </p>
             </div>
           )}
 
           {loading && (
-            <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-8 text-center text-slate-400 flex flex-col items-center justify-center min-h-[380px] space-y-3 animate-pulse">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center text-white">
-                <Sparkles className="w-6 h-6 animate-spin-slow" />
-              </div>
-              <div className="text-sm font-semibold text-white">Synthesizing Optical Formulations...</div>
-              <div className="text-xs text-slate-400 max-w-xs">
-                Gemini is optimizing lens characteristics, lighting balance, and engine parameter flags for {targetEngine}.
+            <div className="bg-zinc-950 border border-zinc-800 rounded-lg p-8 text-center flex flex-col items-center justify-center min-h-[380px] space-y-3">
+              <div className="w-8 h-8 rounded-full border-2 border-zinc-700 border-t-blue-500 animate-spin" />
+              <div className="text-sm font-medium text-white">Compiling Optical Formulations...</div>
+              <div className="text-xs text-zinc-400 font-mono">
+                {cred.provider} / {cred.model} &rarr; {targetEngine}
               </div>
             </div>
           )}
 
-          {variations && (
+          {variations && !loading && (
             <div className="space-y-3">
-              {variations.map(varItem => {
+              {variations.map((varItem, idx) => {
                 const isCopied = copiedId === varItem.id;
                 const isSaved = savedPrompts.includes(varItem.fullPrompt);
 
                 return (
                   <div
                     key={varItem.id}
-                    className="bg-slate-900/90 border border-slate-800 hover:border-purple-500/50 rounded-2xl p-4 shadow-lg transition-all space-y-3 group"
+                    className="bg-zinc-900/70 border border-zinc-800 hover:border-zinc-700 rounded-lg p-4 transition-colors space-y-3"
                   >
-                    {/* Header */}
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-purple-400" />
-                        {varItem.styleLabel}
+                      <span className="text-xs font-semibold text-white flex items-center gap-2">
+                        <span className="font-mono text-zinc-500 tabular-nums">
+                          {String(idx + 1).padStart(2, '0')}
+                        </span>
+                        <span>{varItem.styleLabel}</span>
                       </span>
                       <div className="flex items-center gap-1">
                         <button
+                          type="button"
                           onClick={() => handleToggleSave(varItem.fullPrompt)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-                          title={isSaved ? 'Saved in library' : 'Save to library'}
+                          className="p-1.5 rounded text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer"
+                          title={isSaved ? 'Saved' : 'Bookmark'}
                         >
                           {isSaved ? (
-                            <BookmarkCheck className="w-3.5 h-3.5 text-purple-400" />
+                            <BookmarkCheck className="w-3.5 h-3.5 text-blue-400" />
                           ) : (
                             <Bookmark className="w-3.5 h-3.5" />
                           )}
                         </button>
                         <button
+                          type="button"
                           onClick={() => handleCopyPrompt(varItem.id, varItem.fullPrompt)}
-                          className={`p-1.5 px-2.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all ${
+                          className={`px-2.5 py-1 rounded text-xs font-medium flex items-center gap-1 transition-colors cursor-pointer ${
                             isCopied
                               ? 'bg-emerald-600 text-white'
-                              : 'bg-purple-600/30 hover:bg-purple-600/50 text-purple-300 border border-purple-500/40'
+                              : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700'
                           }`}
                         >
                           {isCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                          <span>{isCopied ? 'Copied!' : 'Copy'}</span>
+                          <span>{isCopied ? 'Copied' : 'Copy'}</span>
                         </button>
                       </div>
                     </div>
 
-                    {/* Prompt Box */}
-                    <div className="bg-slate-950 rounded-xl p-3 border border-slate-850 text-xs text-slate-200 font-mono leading-relaxed select-all">
+                    <div className="bg-zinc-950 rounded-md p-3 border border-zinc-800 text-xs text-zinc-200 font-mono leading-relaxed select-all">
                       {varItem.fullPrompt}
                     </div>
 
-                    {/* Breakdown Badges */}
-                    <div className="flex flex-wrap gap-1 text-[10px] text-slate-400">
-                      <span className="px-2 py-0.5 rounded bg-slate-950 border border-slate-800">
-                        {varItem.breakdown.camera}
-                      </span>
-                      <span className="px-2 py-0.5 rounded bg-slate-950 border border-slate-800">
-                        {varItem.breakdown.lighting}
-                      </span>
-                      <span className="px-2 py-0.5 rounded bg-purple-950/60 border border-purple-500/30 text-purple-300">
-                        {varItem.engineParameters}
-                      </span>
+                    <div className="text-[11px] font-mono text-zinc-400 space-y-1">
+                      <div>
+                        <span className="text-zinc-500">Camera:</span> {varItem.breakdown.camera} ·{' '}
+                        <span className="text-zinc-500">Light:</span> {varItem.breakdown.lighting}
+                      </div>
+                      {varItem.engineParameters && (
+                        <div className="text-blue-400">{varItem.engineParameters}</div>
+                      )}
                     </div>
 
-                    {/* Rationale */}
-                    <div className="text-[11px] text-slate-400 italic">
-                      &ldquo;{varItem.rationale}&rdquo;
+                    <div className="text-[11px] text-zinc-400">
+                      {varItem.rationale}
                     </div>
                   </div>
                 );
               })}
 
-              {/* Creative Tips from Gemini */}
               {creativeTips.length > 0 && (
-                <div className="bg-slate-950/70 border border-slate-800 rounded-xl p-3 text-xs text-slate-400 space-y-1.5">
-                  <div className="font-semibold text-purple-300 flex items-center gap-1.5">
-                    <Info className="w-3.5 h-3.5" />
-                    <span>Creative Engine Tips</span>
+                <div className="bg-zinc-950 border border-zinc-800 rounded-lg p-3.5 text-xs text-zinc-400 space-y-1.5">
+                  <div className="font-semibold text-zinc-200 flex items-center gap-1.5">
+                    <Info className="w-3.5 h-3.5 text-blue-400" />
+                    <span>Parameter Notes</span>
                   </div>
                   {creativeTips.map((tip, idx) => (
-                    <div key={idx} className="text-[11px] leading-relaxed text-slate-400">
-                      • {tip}
+                    <div key={idx} className="text-[11px] leading-relaxed text-zinc-400">
+                      &mdash; {tip}
                     </div>
                   ))}
                 </div>

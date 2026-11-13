@@ -3,7 +3,7 @@
  * Main orchestrator for Live Website Builder with Responsive Preview,
  * Section Hierarchy, 3D Math/Avatar procedural rendering, and Standalone Export.
  */
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   FloatingElement,
   SectionType,
@@ -14,6 +14,7 @@ import {
   createInitialSection,
   createProjectFromTemplate,
 } from './builderDefaults';
+import { AISettings, getActiveCredential } from '../../types/ai';
 import { SiteCanvas } from './SiteCanvas';
 import { SiteLayers } from './SiteLayers';
 import { SiteInspector } from './SiteInspector';
@@ -27,21 +28,33 @@ import {
   EyeOff,
   FolderOpen,
   Laptop,
+  Layers,
   LayoutTemplate,
+  Monitor,
+  MoreVertical,
   Palette,
   Redo2,
   Save,
+  Sliders,
   Smartphone,
-  Sparkles,
   Tablet,
   Undo2,
+  Wand2,
 } from 'lucide-react';
 
-export const WebsiteBuilderTab: React.FC = () => {
-  // Modal for browsing 10+ layout templates
+interface WebsiteBuilderTabProps {
+  settings: AISettings;
+  triggerToast: (message: string, type?: 'success' | 'error' | 'info') => void;
+  onOpenSettings?: () => void;
+}
+
+export const WebsiteBuilderTab: React.FC<WebsiteBuilderTabProps> = ({
+  settings,
+  triggerToast,
+  onOpenSettings,
+}) => {
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
 
-  // Main project state with initial Web Developer template
   const [project, setProject] = useState<SiteProject>(() => {
     try {
       const saved = localStorage.getItem('sitecraft_active_project');
@@ -52,24 +65,24 @@ export const WebsiteBuilderTab: React.FC = () => {
     return createProjectFromTemplate('webdev');
   });
 
-  // History stack for Undo / Redo
   const [history, setHistory] = useState<SiteProject[]>([project]);
   const [historyIdx, setHistoryIdx] = useState<number>(0);
 
-  // Editor viewport & modes
-  const [device, setDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
+  const [device, setDevice] = useState<'desktop' | 'tablet' | 'mobile'>(() =>
+    typeof window !== 'undefined' && window.innerWidth < 768 ? 'mobile' : 'desktop'
+  );
   const [previewMode, setPreviewMode] = useState<boolean>(false);
+  const [mobilePane, setMobilePane] = useState<'canvas' | 'layers' | 'inspector'>('canvas');
+  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState<boolean>(false);
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(
     project.sections[0]?.id || null
   );
   const [selectedFloatId, setSelectedFloatId] = useState<string | null>(null);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isAiPolishing, setIsAiPolishing] = useState<boolean>(false);
   const [isBrandModalOpen, setIsBrandModalOpen] = useState<boolean>(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Persist project changes to local storage & history
   const updateProjectWithHistory = (updater: (prev: SiteProject) => SiteProject) => {
     setProject(prev => {
       const next = updater(prev);
@@ -89,12 +102,6 @@ export const WebsiteBuilderTab: React.FC = () => {
     });
   };
 
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3500);
-  };
-
-  // Undo / Redo handlers
   const handleUndo = () => {
     if (historyIdx > 0) {
       const nextIdx = historyIdx - 1;
@@ -111,7 +118,6 @@ export const WebsiteBuilderTab: React.FC = () => {
     }
   };
 
-  // Update specific key in active section
   const handleUpdateSectionData = (sectionId: string, path: string, value: any) => {
     updateProjectWithHistory(prev => {
       const updated = prev.sections.map(s => {
@@ -123,7 +129,6 @@ export const WebsiteBuilderTab: React.FC = () => {
         if (parts.length === 1) {
           nextData[parts[0]] = value;
         } else if (parts.length === 3 && !isNaN(Number(parts[1]))) {
-          // e.g. items.0.title
           const listKey = parts[0];
           const idx = Number(parts[1]);
           const field = parts[2];
@@ -139,7 +144,6 @@ export const WebsiteBuilderTab: React.FC = () => {
     });
   };
 
-  // Section actions (reorder, duplicate, hide, delete)
   const handleSectionAction = (
     sectionId: string,
     action: 'up' | 'down' | 'dup' | 'hide' | 'del'
@@ -169,7 +173,7 @@ export const WebsiteBuilderTab: React.FC = () => {
       } else if (action === 'hide') {
         updated[idx] = { ...updated[idx], visible: !updated[idx].visible };
       } else if (action === 'del') {
-        if (updated.length <= 1) return prev; // keep at least 1
+        if (updated.length <= 1) return prev;
         updated.splice(idx, 1);
         if (selectedSectionId === sectionId) {
           setSelectedSectionId(updated[0]?.id || null);
@@ -180,27 +184,25 @@ export const WebsiteBuilderTab: React.FC = () => {
     });
   };
 
-  // Add new section to page
   const handleAddSection = (type: SectionType) => {
-    updateProjectWithHistory(prev => {
-      const newSec = createInitialSection(type, undefined, undefined, undefined, prev.profile);
-      return {
-        ...prev,
-        sections: [...prev.sections, newSec],
-      };
-    });
-    showToast(`Added ${type} section to page`);
+    const newSec = createInitialSection(type, undefined, undefined, undefined, project.profile);
+    updateProjectWithHistory(prev => ({
+      ...prev,
+      sections: [...prev.sections, newSec],
+    }));
+    setSelectedSectionId(newSec.id);
+    setMobilePane('canvas');
+    triggerToast(`Added ${type} section to page`, 'info');
   };
 
-  // Switch template
   const handleApplyTemplate = (templateId: string) => {
     const nextProj = createProjectFromTemplate(templateId, project.profile);
     updateProjectWithHistory(() => nextProj);
     setSelectedSectionId(nextProj.sections[0]?.id || null);
-    showToast(`Applied ${templateId} blueprint`);
+    setMobilePane('canvas');
+    triggerToast(`Applied ${templateId} blueprint`, 'success');
   };
 
-  // Update floating element
   const handleUpdateFloat = (
     sectionId: string,
     floatId: string,
@@ -218,7 +220,6 @@ export const WebsiteBuilderTab: React.FC = () => {
     });
   };
 
-  // Save Project JSON
   const handleSaveProjectJson = () => {
     const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(project, null, 2));
     const downloadAnchor = document.createElement('a');
@@ -227,10 +228,9 @@ export const WebsiteBuilderTab: React.FC = () => {
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
-    showToast('Project JSON saved');
+    triggerToast('Project JSON downloaded', 'success');
   };
 
-  // Open Project JSON
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -242,28 +242,26 @@ export const WebsiteBuilderTab: React.FC = () => {
         if (loaded && loaded.sections) {
           updateProjectWithHistory(() => loaded);
           setSelectedSectionId(loaded.sections[0]?.id || null);
-          showToast('Project opened successfully');
+          triggerToast('Project loaded successfully', 'success');
         }
       } catch {
-        showToast('Invalid SiteCraft JSON file');
+        triggerToast('Invalid SiteCraft JSON file', 'error');
       }
     };
     reader.readAsText(file);
     e.target.value = '';
   };
 
-  // Copy Standalone HTML
   const handleCopyHtml = async () => {
     const html = generateStandaloneHtml(project);
     try {
       await navigator.clipboard.writeText(html);
-      showToast('Standalone HTML copied to clipboard');
+      triggerToast('Standalone HTML copied to clipboard', 'success');
     } catch {
-      showToast('Failed to copy to clipboard');
+      triggerToast('Failed to copy HTML to clipboard', 'error');
     }
   };
 
-  // Export standalone index.html file
   const handleExportHtmlFile = () => {
     const html = generateStandaloneHtml(project);
     const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
@@ -275,36 +273,61 @@ export const WebsiteBuilderTab: React.FC = () => {
     downloadAnchor.click();
     downloadAnchor.remove();
     URL.revokeObjectURL(url);
-    showToast('Exported index.html successfully!');
+    triggerToast('Exported standalone index.html', 'success');
   };
 
-  // AI Assist: Polish Section
+  // Real AI Section Copy Rewrite using active provider & keys
   const handleAiPolishSection = async () => {
-    const activeSec = project.sections.find(s => s.id === selectedSectionId);
-    if (!activeSec) return;
+    const activeSec = project.sections.find(s => s.id === selectedSectionId) || project.sections[0];
+    if (!activeSec) {
+      triggerToast('Select a section on the canvas first.', 'info');
+      return;
+    }
 
+    const cred = getActiveCredential(settings);
+    if (cred.provider !== 'gemini' && !cred.apiKey) {
+      triggerToast(
+        `Add your ${cred.provider.toUpperCase()} API key in AI Settings before using Polish Section.`,
+        'error'
+      );
+      return;
+    }
     setIsAiPolishing(true);
-    showToast(`AI polishing ${activeSec.type} copy...`);
+    triggerToast(`Refining ${activeSec.type} copy via ${cred.provider.toUpperCase()}...`, 'info');
 
     try {
-      const response = await fetch('/api/prompt-craft', {
+      const response = await fetch('/api/section-polish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          task: `Rewrite the content for website section "${activeSec.type}" to make it punchy, professional and high-converting. Existing content: ${JSON.stringify(activeSec.data)}`,
-          domain: 'Portfolio',
-          framework: 'SiteCraft',
+          sectionType: activeSec.type,
+          sectionData: activeSec.data,
+          brandName: project.profile.name,
+          role: project.profile.role,
+          provider: cred.provider,
+          apiKey: cred.apiKey,
+          model: cred.model,
+          temperature: settings.temperature,
         }),
       });
 
-      if (!response.ok) throw new Error('API request failed');
       const data = await response.json();
-
-      if (data.prompt) {
-        showToast('Generated fresh suggestions!');
+      if (!response.ok || !data.success || !data.updatedData) {
+        throw new Error(data.error || 'Failed to polish section copy.');
       }
-    } catch {
-      showToast('Polished with domain rules');
+
+      updateProjectWithHistory(prev => ({
+        ...prev,
+        sections: prev.sections.map(s =>
+          s.id === activeSec.id
+            ? { ...s, data: { ...s.data, ...data.updatedData } }
+            : s
+        ),
+      }));
+
+      triggerToast(`Updated ${activeSec.type} copy directly on canvas.`, 'success');
+    } catch (err: any) {
+      triggerToast(err.message || 'Section rewrite failed. Check API key in Settings.', 'error');
     } finally {
       setIsAiPolishing(false);
     }
@@ -318,7 +341,7 @@ export const WebsiteBuilderTab: React.FC = () => {
         ...prev.theme,
         palette: {
           id: 'custom_ai',
-          name: palette.name || 'AI Generated Palette',
+          name: palette.name || 'Custom Brand Palette',
           primary: palette.primary,
           accent: palette.accent,
           bg: palette.bg,
@@ -329,7 +352,7 @@ export const WebsiteBuilderTab: React.FC = () => {
         },
       },
     }));
-    showToast('Applied AI Palette to Project');
+    triggerToast('Applied color palette to active site', 'success');
   };
 
   const handleApplyTypography = (fontH: string, fontB: string) => {
@@ -341,10 +364,10 @@ export const WebsiteBuilderTab: React.FC = () => {
         fontB,
       },
     }));
-    showToast(`Applied Typography: ${fontH} + ${fontB}`);
+    triggerToast(`Applied typography: ${fontH} + ${fontB}`, 'success');
   };
 
-  const handleApplyBrand = (brandName: string, logoConcept?: any) => {
+  const handleApplyBrand = (brandName: string) => {
     updateProjectWithHistory(prev => {
       const updatedProfile = {
         ...prev.profile,
@@ -369,10 +392,10 @@ export const WebsiteBuilderTab: React.FC = () => {
         sections: updatedSections,
       };
     });
-    showToast(`Updated Brand to ${brandName}`);
+    triggerToast(`Updated brand identity to ${brandName}`, 'success');
   };
 
-  const handleApplyCompleteKit = (kit: GeneratedBrandKit, selectedLogoIdx: number) => {
+  const handleApplyCompleteKit = (kit: GeneratedBrandKit) => {
     updateProjectWithHistory(prev => {
       const updatedProfile = {
         ...prev.profile,
@@ -384,7 +407,7 @@ export const WebsiteBuilderTab: React.FC = () => {
         ...prev.theme,
         palette: {
           id: 'custom_ai',
-          name: kit.palette.name || 'AI Generated',
+          name: kit.palette.name || 'Generated Brand',
           primary: kit.palette.primary,
           accent: kit.palette.accent,
           bg: kit.palette.bg,
@@ -415,7 +438,7 @@ export const WebsiteBuilderTab: React.FC = () => {
         sections: updatedSections,
       };
     });
-    showToast('Applied Full Brand Kit (Palette, Typography & Brand)!');
+    triggerToast('Applied full brand system to project', 'success');
   };
 
   const handleAddFloatingLogo = (logoConcept: any) => {
@@ -445,144 +468,150 @@ export const WebsiteBuilderTab: React.FC = () => {
 
       return { ...prev, sections: updated };
     });
-    showToast(`Added 3D ${logoConcept.name} to section floats`);
+    triggerToast(`Added 3D ${logoConcept.name} mark to section`, 'success');
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-65px)] bg-slate-950 overflow-hidden font-sans">
+    <div className="flex flex-col h-[calc(100dvh-65px)] bg-zinc-950 overflow-hidden font-sans relative">
       {/* Top Builder Toolbar */}
-      <div className="h-14 bg-slate-900 border-b border-slate-800 px-4 flex items-center justify-between gap-4 shrink-0 z-20">
-        {/* Left: Branding & History */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5 font-bold text-sm text-white">
-            <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse" />
-            <span className="bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent font-extrabold tracking-tight">
-              SiteCraft
-            </span>
-            <span className="text-xs px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-medium">
-              Live Builder
-            </span>
-          </div>
+      <div className="h-14 bg-zinc-950 border-b border-zinc-900 px-2.5 sm:px-4 flex items-center justify-between gap-2 sm:gap-4 shrink-0 z-20 relative">
+        {/* Left: Workspace History & Templates */}
+        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+          <span className="text-xs font-semibold text-zinc-300 tracking-tight whitespace-nowrap hidden xl:inline">
+            Workbench
+          </span>
 
-          <div className="h-4 w-[1px] bg-slate-800" />
+          <div className="h-4 w-px bg-zinc-800 hidden xl:block" />
 
-          {/* Undo / Redo */}
-          <div className="flex items-center gap-1">
+          {/* Undo / Redo (Desktop & Tablet) */}
+          <div className="hidden sm:flex items-center gap-1">
             <button
+              type="button"
               onClick={handleUndo}
               disabled={historyIdx <= 0}
-              title="Undo (Ctrl+Z)"
-              className="p-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              title="Undo"
+              className="p-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
             >
-              <Undo2 className="w-4 h-4" />
+              <Undo2 className="w-3.5 h-3.5" />
             </button>
             <button
+              type="button"
               onClick={handleRedo}
               disabled={historyIdx >= history.length - 1}
-              title="Redo (Ctrl+Y)"
-              className="p-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              title="Redo"
+              className="p-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
             >
-              <Redo2 className="w-4 h-4" />
+              <Redo2 className="w-3.5 h-3.5" />
             </button>
           </div>
 
-          <div className="h-4 w-[1px] bg-slate-800" />
+          <div className="h-4 w-px bg-zinc-800 hidden sm:block" />
 
           {/* Layout Templates Gallery Switcher */}
           <button
+            type="button"
             onClick={() => setIsTemplateModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900/90 hover:bg-slate-800 text-slate-200 hover:text-white border border-slate-700/80 rounded-xl text-xs font-semibold shadow-sm transition-all cursor-pointer"
-            title="Browse and switch between 10+ pre-built layout archetypes"
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 sm:py-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 hover:text-white border border-zinc-800 rounded-md text-xs font-medium transition-colors cursor-pointer whitespace-nowrap"
+            title="Switch website template"
           >
-            <LayoutTemplate className="w-3.5 h-3.5 text-indigo-400" />
-            <span className="hidden sm:inline">Templates</span>
-            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-              10+
-            </span>
+            <LayoutTemplate className="w-3.5 h-3.5 text-blue-400" />
+            <span className="hidden xs:inline sm:inline">Templates</span>
           </button>
         </div>
 
         {/* Center: Device Viewport Switcher & Preview Toggle */}
-        <div className="flex items-center gap-2">
-          <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <div className="flex items-center bg-zinc-900 p-0.5 rounded-md border border-zinc-800">
             <button
-              onClick={() => setDevice('desktop')}
-              className={`p-1.5 px-3 rounded-lg flex items-center gap-1.5 text-xs font-medium transition-all ${
+              type="button"
+              onClick={() => {
+                setDevice('desktop');
+                setMobilePane('canvas');
+              }}
+              className={`p-1.5 sm:px-2.5 sm:py-1 rounded text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap ${
                 device === 'desktop'
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-zinc-800 text-white'
+                  : 'text-zinc-400 hover:text-zinc-200'
               }`}
               title="Desktop View (1280px)"
             >
               <Laptop className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Desktop</span>
+              <span className="hidden md:inline">Desktop</span>
             </button>
 
             <button
-              onClick={() => setDevice('tablet')}
-              className={`p-1.5 px-3 rounded-lg flex items-center gap-1.5 text-xs font-medium transition-all ${
+              type="button"
+              onClick={() => {
+                setDevice('tablet');
+                setMobilePane('canvas');
+              }}
+              className={`p-1.5 sm:px-2.5 sm:py-1 rounded text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap ${
                 device === 'tablet'
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-zinc-800 text-white'
+                  : 'text-zinc-400 hover:text-zinc-200'
               }`}
               title="Tablet View (768px)"
             >
               <Tablet className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Tablet</span>
+              <span className="hidden md:inline">Tablet</span>
             </button>
 
             <button
-              onClick={() => setDevice('mobile')}
-              className={`p-1.5 px-3 rounded-lg flex items-center gap-1.5 text-xs font-medium transition-all ${
+              type="button"
+              onClick={() => {
+                setDevice('mobile');
+                setMobilePane('canvas');
+              }}
+              className={`p-1.5 sm:px-2.5 sm:py-1 rounded text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap ${
                 device === 'mobile'
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-zinc-800 text-white'
+                  : 'text-zinc-400 hover:text-zinc-200'
               }`}
               title="Mobile View (390px)"
             >
               <Smartphone className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Mobile</span>
+              <span className="hidden md:inline">Mobile</span>
             </button>
           </div>
 
-          {/* Interactive Preview Mode Toggle */}
           <button
+            type="button"
             onClick={() => setPreviewMode(!previewMode)}
-            className={`p-1.5 px-3 rounded-xl flex items-center gap-1.5 text-xs font-semibold border transition-all ${
+            className={`px-2.5 sm:px-3 py-2 sm:py-1.5 rounded-md flex items-center gap-1.5 text-xs font-medium border transition-colors cursor-pointer whitespace-nowrap ${
               previewMode
-                ? 'bg-emerald-600 border-emerald-500 text-white shadow-lg'
-                : 'bg-slate-800/80 border-slate-700 text-slate-300 hover:border-slate-600 hover:text-white'
+                ? 'bg-emerald-600 border-emerald-500 text-white'
+                : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800 hover:text-white'
             }`}
+            title={previewMode ? 'Exit Live Preview' : 'Preview Full Website'}
           >
             {previewMode ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-            <span>{previewMode ? 'Exit Preview' : 'Interactive Preview'}</span>
+            <span className="hidden sm:inline">{previewMode ? 'Exit Preview' : 'Preview'}</span>
           </button>
         </div>
 
-        {/* Right: AI Assist, Project Save/Open, Copy & Export */}
-        <div className="flex items-center gap-2">
-          {/* Gemini AI Brand Kit (Palette, Typography & Three.js 3D Logos) */}
+        {/* Right: Brand System, AI Copy Polish, Save/Open, Copy & Export */}
+        <div className="flex items-center gap-1.5 shrink-0">
           <button
+            type="button"
             onClick={() => setIsBrandModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-purple-600/30 to-indigo-600/30 hover:from-purple-600/50 hover:to-indigo-600/50 text-purple-200 border border-purple-500/50 rounded-xl text-xs font-semibold shadow-sm transition-all"
-            title="Generate Cohesive Palette, Typography & 3D Three.js Logos with Gemini"
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 sm:py-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 rounded-md text-xs font-medium transition-colors cursor-pointer whitespace-nowrap"
+            title="Colors, fonts, and 3D logo marks"
           >
-            <Sparkles className="w-3.5 h-3.5 text-purple-400 animate-pulse" />
-            <span className="hidden sm:inline">AI Brand Kit (3D)</span>
-            <span className="sm:hidden">Brand</span>
+            <Palette className="w-3.5 h-3.5 text-blue-400" />
+            <span className="hidden md:inline">Brand Kit</span>
           </button>
 
           <button
+            type="button"
             onClick={handleAiPolishSection}
             disabled={isAiPolishing}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-950/70 hover:bg-indigo-900/80 text-indigo-300 border border-indigo-500/40 rounded-xl text-xs font-semibold transition-colors"
-            title="Use AI to polish active section copy"
+            className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 rounded-md text-xs font-medium transition-colors cursor-pointer disabled:opacity-50 whitespace-nowrap"
+            title="Rewrite selected section copy using active AI provider"
           >
-            <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-            <span className="hidden md:inline">{isAiPolishing ? 'Thinking...' : 'AI Assist'}</span>
+            <Wand2 className="w-3.5 h-3.5 text-blue-400" />
+            <span>{isAiPolishing ? 'Rewriting...' : 'Polish'}</span>
           </button>
 
-          {/* Open / Save Project */}
           <input
             type="file"
             ref={fileInputRef}
@@ -592,105 +621,268 @@ export const WebsiteBuilderTab: React.FC = () => {
           />
 
           <button
+            type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="p-1.5 px-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs transition-colors"
+            className="hidden lg:flex p-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 text-xs transition-colors cursor-pointer"
             title="Open Project JSON"
           >
-            <FolderOpen className="w-4 h-4" />
+            <FolderOpen className="w-3.5 h-3.5" />
           </button>
 
           <button
+            type="button"
             onClick={handleSaveProjectJson}
-            className="p-1.5 px-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs transition-colors"
+            className="hidden lg:flex p-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 text-xs transition-colors cursor-pointer"
             title="Save Project JSON"
           >
-            <Save className="w-4 h-4" />
+            <Save className="w-3.5 h-3.5" />
           </button>
 
-          {/* Copy HTML */}
           <button
+            type="button"
             onClick={handleCopyHtml}
-            className="p-1.5 px-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-medium transition-colors flex items-center gap-1.5"
-            title="Copy Standalone HTML to clipboard"
+            className="hidden xl:flex px-2.5 py-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 text-xs font-medium transition-colors items-center gap-1.5 cursor-pointer whitespace-nowrap"
+            title="Copy standalone HTML"
           >
             <Code className="w-3.5 h-3.5" />
-            <span className="hidden lg:inline">Copy HTML</span>
+            <span>Copy HTML</span>
           </button>
 
-          {/* Export index.html */}
           <button
+            type="button"
             onClick={handleExportHtmlFile}
-            className="p-1.5 px-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-lg transition-all flex items-center gap-1.5"
+            className="px-2.5 sm:px-3.5 py-2 sm:py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
             title="Download standalone index.html"
           >
             <Download className="w-3.5 h-3.5" />
-            <span>Export Site</span>
+            <span className="hidden sm:inline">Export</span>
           </button>
+
+          {/* Compact More Menu (Mobile & Tablet tools) */}
+          <div className="relative xl:hidden">
+            <button
+              type="button"
+              onClick={() => setIsMoreMenuOpen(prev => !prev)}
+              className="p-2 sm:p-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 transition-colors cursor-pointer"
+              title="More actions"
+            >
+              <MoreVertical className="w-4 h-4" />
+            </button>
+
+            {isMoreMenuOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-30"
+                  onClick={() => setIsMoreMenuOpen(false)}
+                />
+                <div className="absolute right-0 mt-2 w-52 bg-zinc-950 border border-zinc-800 rounded-xl shadow-2xl p-1.5 z-40 text-xs text-zinc-200 space-y-0.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleUndo();
+                      setIsMoreMenuOpen(false);
+                    }}
+                    disabled={historyIdx <= 0}
+                    className="sm:hidden w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg hover:bg-zinc-900 disabled:opacity-40 text-left cursor-pointer"
+                  >
+                    <Undo2 className="w-3.5 h-3.5 text-zinc-400" />
+                    <span>Undo Change</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleRedo();
+                      setIsMoreMenuOpen(false);
+                    }}
+                    disabled={historyIdx >= history.length - 1}
+                    className="sm:hidden w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg hover:bg-zinc-900 disabled:opacity-40 text-left cursor-pointer"
+                  >
+                    <Redo2 className="w-3.5 h-3.5 text-zinc-400" />
+                    <span>Redo Change</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMoreMenuOpen(false);
+                      handleAiPolishSection();
+                    }}
+                    disabled={isAiPolishing}
+                    className="md:hidden w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg hover:bg-zinc-900 disabled:opacity-40 text-left cursor-pointer"
+                  >
+                    <Wand2 className="w-3.5 h-3.5 text-blue-400" />
+                    <span>{isAiPolishing ? 'Rewriting Section...' : 'AI Polish Section'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMoreMenuOpen(false);
+                      handleCopyHtml();
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg hover:bg-zinc-900 text-left cursor-pointer"
+                  >
+                    <Code className="w-3.5 h-3.5 text-zinc-400" />
+                    <span>Copy HTML Code</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMoreMenuOpen(false);
+                      fileInputRef.current?.click();
+                    }}
+                    className="lg:hidden w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg hover:bg-zinc-900 text-left cursor-pointer"
+                  >
+                    <FolderOpen className="w-3.5 h-3.5 text-zinc-400" />
+                    <span>Import Project JSON</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMoreMenuOpen(false);
+                      handleSaveProjectJson();
+                    }}
+                    className="lg:hidden w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg hover:bg-zinc-900 text-left cursor-pointer"
+                  >
+                    <Save className="w-3.5 h-3.5 text-zinc-400" />
+                    <span>Save Project JSON</span>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Main Workspace Body */}
+      {/* Main Workspace Body (Responsive Single-Pane on Mobile/Tablet, 3-Pane on Desktop lg+) */}
       <div className="flex flex-1 min-h-0 relative">
-        {/* Left Sidebar (Hidden in Preview Mode) */}
         {!previewMode && (
-          <SiteLayers
-            project={project}
-            selectedSectionId={selectedSectionId}
-            onSelectSection={setSelectedSectionId}
-            onUpdateProject={updateProjectWithHistory}
-            onSectionAction={handleSectionAction}
-            onAddSection={handleAddSection}
-            onApplyTemplate={handleApplyTemplate}
-          />
+          <div
+            className={`${
+              mobilePane === 'layers' ? 'flex w-full lg:w-72' : 'hidden lg:flex lg:w-72'
+            } h-full min-h-0 shrink-0`}
+          >
+            <SiteLayers
+              project={project}
+              selectedSectionId={selectedSectionId}
+              onSelectSection={setSelectedSectionId}
+              onUpdateProject={updateProjectWithHistory}
+              onSectionAction={handleSectionAction}
+              onAddSection={handleAddSection}
+              onApplyTemplate={handleApplyTemplate}
+              settings={settings}
+              triggerToast={triggerToast}
+              onOpenSettings={onOpenSettings}
+              onMobileDone={() => setMobilePane('canvas')}
+            />
+          </div>
         )}
 
-        {/* Center Canvas */}
-        <SiteCanvas
-          project={project}
-          device={device}
-          previewMode={previewMode}
-          selectedSectionId={selectedSectionId}
-          selectedFloatId={selectedFloatId}
-          onSelectSection={setSelectedSectionId}
-          onSelectFloat={setSelectedFloatId}
-          onUpdateSectionData={handleUpdateSectionData}
-          onSectionAction={handleSectionAction}
-          onUpdateFloat={handleUpdateFloat}
-        />
-
-        {/* Right Sidebar (Hidden in Preview Mode) */}
-        {!previewMode && (
-          <SiteInspector
+        <div
+          className={`${
+            mobilePane === 'canvas' || previewMode ? 'flex' : 'hidden lg:flex'
+          } flex-1 min-w-0 h-full min-h-0`}
+        >
+          <SiteCanvas
             project={project}
+            device={device}
+            previewMode={previewMode}
             selectedSectionId={selectedSectionId}
             selectedFloatId={selectedFloatId}
-            onUpdateProject={updateProjectWithHistory}
+            onSelectSection={setSelectedSectionId}
             onSelectFloat={setSelectedFloatId}
+            onUpdateSectionData={handleUpdateSectionData}
+            onSectionAction={handleSectionAction}
+            onUpdateFloat={handleUpdateFloat}
+            onMobileEditSection={() => setMobilePane('inspector')}
           />
+        </div>
+
+        {!previewMode && (
+          <div
+            className={`${
+              mobilePane === 'inspector' ? 'flex w-full lg:w-80' : 'hidden lg:flex lg:w-80'
+            } h-full min-h-0 shrink-0`}
+          >
+            <SiteInspector
+              project={project}
+              selectedSectionId={selectedSectionId}
+              selectedFloatId={selectedFloatId}
+              onUpdateProject={updateProjectWithHistory}
+              onSelectFloat={setSelectedFloatId}
+              onMobileDone={() => setMobilePane('canvas')}
+            />
+          </div>
         )}
       </div>
 
-      {/* Toast Notification */}
-      {toastMessage && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-indigo-600 text-white font-semibold text-xs px-4 py-2.5 rounded-xl shadow-2xl z-50 animate-bounce">
-          {toastMessage}
+      {/* Mobile Bottom Studio Navigation Bar (< lg only) */}
+      {!previewMode ? (
+        <div className="lg:hidden grid grid-cols-3 h-14 bg-zinc-950 border-t border-zinc-800 shrink-0 z-30">
+          <button
+            type="button"
+            onClick={() => setMobilePane('canvas')}
+            className={`flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors cursor-pointer ${
+              mobilePane === 'canvas'
+                ? 'text-blue-400 bg-zinc-900/70'
+                : 'text-zinc-400 hover:text-zinc-200'
+            }`}
+          >
+            <Monitor className="w-4 h-4" />
+            <span>Website</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setMobilePane('layers')}
+            className={`flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors cursor-pointer border-x border-zinc-900 ${
+              mobilePane === 'layers'
+                ? 'text-blue-400 bg-zinc-900/70'
+                : 'text-zinc-400 hover:text-zinc-200'
+            }`}
+          >
+            <Layers className="w-4 h-4" />
+            <span>Sections</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setMobilePane('inspector')}
+            className={`flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors cursor-pointer ${
+              mobilePane === 'inspector'
+                ? 'text-blue-400 bg-zinc-900/70'
+                : 'text-zinc-400 hover:text-zinc-200'
+            }`}
+          >
+            <Sliders className="w-4 h-4" />
+            <span>Edit &amp; Style</span>
+          </button>
         </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setPreviewMode(false)}
+          className="lg:hidden fixed bottom-4 right-4 z-40 flex items-center gap-1.5 px-3.5 py-2.5 rounded-full bg-zinc-950/95 border border-zinc-700 text-white text-xs font-medium shadow-xl backdrop-blur-md cursor-pointer"
+        >
+          <EyeOff className="w-3.5 h-3.5 text-emerald-400" />
+          <span>Exit Preview</span>
+        </button>
       )}
 
-      {/* Gemini AI Brand Kit Modal with 3D Three.js Logos */}
+      {/* AI Brand Kit Modal with 3D Three.js Logos */}
       <BrandKitModal
         isOpen={isBrandModalOpen}
         onClose={() => setIsBrandModalOpen(false)}
         project={project}
+        settings={settings}
         onApplyPalette={handleApplyPalette}
         onApplyTypography={handleApplyTypography}
         onApplyBrand={handleApplyBrand}
         onApplyCompleteKit={handleApplyCompleteKit}
         onAddFloatingLogo={handleAddFloatingLogo}
-        showToast={showToast}
+        triggerToast={triggerToast}
+        onOpenSettings={onOpenSettings}
       />
 
-      {/* 10+ Layout Archetypes Gallery Modal */}
+      {/* Layout Archetypes Gallery Modal */}
       <TemplateGalleryModal
         isOpen={isTemplateModalOpen}
         onClose={() => setIsTemplateModalOpen(false)}
@@ -700,4 +892,3 @@ export const WebsiteBuilderTab: React.FC = () => {
     </div>
   );
 };
-

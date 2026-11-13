@@ -16,7 +16,7 @@ import {
 import {
   computeThemeVars,
   DEFAULT_CANVAS_STUDIO_CONFIG,
-  CANVAS_BACKDROP_PRESETS,
+  SECTION_META,
 } from './builderDefaults';
 import { startAvatar, startScene } from './scFxRuntime';
 import { ThreeLogoViewer } from './ThreeLogoViewer';
@@ -30,20 +30,12 @@ import {
   Trash2,
   ZoomIn,
   ZoomOut,
-  RotateCcw,
   Sliders,
-  CircleDot,
-  Grid,
-  Layers,
-  Sparkles,
-  Box,
   Lock,
-  RefreshCw,
-  ExternalLink,
   Laptop,
   Tablet,
   Smartphone,
-  Check,
+  Pencil,
 } from 'lucide-react';
 
 interface SiteCanvasProps {
@@ -57,6 +49,7 @@ interface SiteCanvasProps {
   onUpdateSectionData: (sectionId: string, path: string, value: any) => void;
   onSectionAction: (sectionId: string, action: 'up' | 'down' | 'dup' | 'hide' | 'del') => void;
   onUpdateFloat: (sectionId: string, floatId: string, updates: Partial<FloatingElement>) => void;
+  onMobileEditSection?: () => void;
 }
 
 export const SiteCanvas: React.FC<SiteCanvasProps> = ({
@@ -69,8 +62,12 @@ export const SiteCanvas: React.FC<SiteCanvasProps> = ({
   onSelectFloat,
   onUpdateSectionData,
   onSectionAction,
+  onMobileEditSection,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const frameRef = useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = useState<number>(1024);
+  const [frameHeight, setFrameHeight] = useState<number>(0);
 
   // Google Stitch Canvas Studio customizable configuration
   const [canvasConfig, setCanvasConfig] = useState<CanvasStudioConfig>(() => {
@@ -86,7 +83,26 @@ export const SiteCanvas: React.FC<SiteCanvasProps> = ({
   });
 
   const [isStudioControlsOpen, setIsStudioControlsOpen] = useState(false);
-  const [customViewportWidth, setCustomViewportWidth] = useState<number | null>(null);
+
+  // Track container width & frame height for seamless responsive canvas fitting on mobile/tablet
+  useEffect(() => {
+    const el = containerRef.current;
+    const frameEl = frameRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+
+    const ro = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        if (entry.target === el) {
+          setContainerWidth(Math.round(entry.contentRect.width));
+        } else if (entry.target === frameEl) {
+          setFrameHeight(Math.round(entry.contentRect.height));
+        }
+      }
+    });
+    ro.observe(el);
+    if (frameEl) ro.observe(frameEl);
+    return () => ro.disconnect();
+  }, [previewMode, device, project.sections.length]);
 
   // Persist canvas studio config to localStorage
   const updateCanvasConfig = (updates: Partial<CanvasStudioConfig>) => {
@@ -108,7 +124,7 @@ export const SiteCanvas: React.FC<SiteCanvasProps> = ({
     } catch {}
   };
 
-  // Initialize FX and canvas scenes whenever sections change or mount
+  // Initialize FX, animations, and canvas scenes whenever sections change or mount
   useEffect(() => {
     if (!containerRef.current) return;
     const cleanups: (() => void)[] = [];
@@ -126,6 +142,35 @@ export const SiteCanvas: React.FC<SiteCanvasProps> = ({
       const s = startAvatar(cv);
       if (s) cleanups.push(s.stop);
     });
+
+    // reveal [data-anim] sections cleanly
+    const animTargets = containerRef.current.querySelectorAll<HTMLElement>('[data-anim]');
+    if (!previewMode) {
+      // Keep every section visible while editing
+      animTargets.forEach(el => el.classList.add('in'));
+    } else if (typeof window !== 'undefined' && 'IntersectionObserver' in window) {
+      animTargets.forEach(el => {
+        el.classList.remove('in');
+        el.querySelectorAll('.content > .wrap > *').forEach((child, idx) => {
+          (child as HTMLElement).style.setProperty('--i', String(idx));
+        });
+      });
+      const io = new IntersectionObserver(
+        entries => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('in');
+              io.unobserve(entry.target);
+            }
+          });
+        },
+        { root: containerRef.current, threshold: 0.05 }
+      );
+      animTargets.forEach(el => io.observe(el));
+      cleanups.push(() => io.disconnect());
+    } else {
+      animTargets.forEach(el => el.classList.add('in'));
+    }
 
     // mouse spotlight tracking
     const spotSections = containerRef.current.querySelectorAll<HTMLElement>('[data-spot="1"]');
@@ -160,7 +205,7 @@ export const SiteCanvas: React.FC<SiteCanvasProps> = ({
     }
     return (
       <Tag
-        className={`${className || ''} outline-none rounded transition-shadow hover:ring-2 hover:ring-indigo-400/50 focus:ring-2 focus:ring-indigo-500 focus:bg-indigo-500/10 px-1 -mx-1`}
+        className={`${className || ''} outline-none rounded transition-shadow hover:ring-2 hover:ring-blue-400/50 focus:ring-2 focus:ring-blue-500 focus:bg-blue-500/10 px-1 -mx-1`}
         contentEditable
         suppressContentEditableWarning
         onBlur={(e: React.FocusEvent<HTMLElement>) => {
@@ -358,7 +403,10 @@ export const SiteCanvas: React.FC<SiteCanvasProps> = ({
                 )}
               </div>
             </div>
-            <div className="imgbox hero-img flex items-center justify-center p-6 bg-slate-900/30 border border-slate-700/30">
+            <div
+              className="imgbox hero-img flex items-center justify-center p-6 border"
+              style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}
+            >
               <canvas data-scene="torus" style={{ width: '100%', height: '100%', maxHeight: 380 }} />
             </div>
           </div>
@@ -399,7 +447,10 @@ export const SiteCanvas: React.FC<SiteCanvasProps> = ({
                 ))}
               </div>
             </div>
-            <div className="imgbox portrait flex items-center justify-center p-8 bg-slate-900/20 border border-slate-700/20">
+            <div
+              className="imgbox portrait flex items-center justify-center p-8 border"
+              style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}
+            >
               <canvas data-scene="sphere" style={{ width: '100%', height: '100%', maxHeight: 360 }} />
             </div>
           </div>
@@ -448,7 +499,7 @@ export const SiteCanvas: React.FC<SiteCanvasProps> = ({
             <div className={`cards ${variant === 'list' ? 'grid-cols-1' : ''}`}>
               {(data.items || []).map((item: any, i: number) => (
                 <div key={i} className="card">
-                  <div className="ico">{renderEditable(sec.id, `items.${i}.icon`, item.icon || '🚀')}</div>
+                  <div className="ico">{renderEditable(sec.id, `items.${i}.icon`, item.icon || '01')}</div>
                   <h3>{renderEditable(sec.id, `items.${i}.title`, item.title, undefined, 'span')}</h3>
                   <p className="muted text-sm">{renderEditable(sec.id, `items.${i}.text`, item.text, undefined, 'span')}</p>
                 </div>
@@ -467,7 +518,10 @@ export const SiteCanvas: React.FC<SiteCanvasProps> = ({
             <div className="cards">
               {(data.items || []).map((p: any, i: number) => (
                 <div key={i} className="card pcard">
-                  <div className="imgbox flex items-center justify-center p-6 bg-slate-900/40">
+                  <div
+                    className="imgbox flex items-center justify-center p-6 border-b"
+                    style={{ background: 'var(--bg)', borderColor: 'var(--border)' }}
+                  >
                     <canvas data-scene={i % 2 === 0 ? 'cube' : 'waves'} style={{ width: '100%', height: 160 }} />
                   </div>
                   <div className="pad">
@@ -504,18 +558,17 @@ export const SiteCanvas: React.FC<SiteCanvasProps> = ({
                   href={previewMode ? repo.url : undefined}
                   target="_blank"
                   rel="noreferrer"
-                  className="card hover:border-indigo-400 transition-colors"
+                  className="card hover:border-blue-400 transition-colors"
                   onClick={e => !previewMode && e.preventDefault()}
                 >
                   <div className="flex justify-between items-center">
                     <h3 className="text-base font-semibold">{repo.name}</h3>
-                    <span className="text-xs font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300">
+                    <span className="text-xs font-mono muted tabular-nums">
                       ★ {repo.stars?.toLocaleString() || 0}
                     </span>
                   </div>
                   <p className="muted text-sm grow">{repo.description || 'Public repository'}</p>
                   <div className="flex items-center gap-2 text-xs muted font-mono">
-                    <span className="w-2 h-2 rounded-full bg-indigo-400" />
                     <span>{repo.language || 'Code'}</span>
                   </div>
                 </a>
@@ -536,7 +589,10 @@ export const SiteCanvas: React.FC<SiteCanvasProps> = ({
                 <figure key={i} className="card quote">
                   <blockquote>"{renderEditable(sec.id, `items.${i}.quote`, rev.quote)}"</blockquote>
                   <figcaption className="mt-4">
-                    <div className="w-10 h-10 rounded-full bg-indigo-600/30 border border-indigo-400/30 flex items-center justify-center font-bold text-sm">
+                    <div
+                      className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0 border"
+                      style={{ background: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--primary)' }}
+                    >
                       {rev.name?.slice(0, 1) || 'A'}
                     </div>
                     <div>
@@ -601,33 +657,51 @@ export const SiteCanvas: React.FC<SiteCanvasProps> = ({
           </div>
         );
 
-      case 'video':
+      case 'video': {
+        const rawUrl = String(data.url || '').trim();
+        let embedUrl = '';
+        const ytMatch = rawUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]{6,})/);
+        if (ytMatch) {
+          embedUrl = `https://www.youtube-nocookie.com/embed/${ytMatch[1]}`;
+        } else if (rawUrl.includes('youtube-nocookie.com/embed/') || rawUrl.includes('player.vimeo.com/video/')) {
+          embedUrl = rawUrl;
+        }
         return (
           <div className="wrap narrow center">
             <div className="head center">
-              <h2>{renderEditable(sec.id, 'title', data.title || 'Demo Video', undefined, 'span')}</h2>
+              <h2>{renderEditable(sec.id, 'title', data.title || 'Project Reel', undefined, 'span')}</h2>
               <p className="lead">{renderEditable(sec.id, 'subtitle', data.subtitle || 'Watch walkthrough', undefined, 'span')}</p>
             </div>
             <div className="vwrap my-4">
-              <iframe
-                src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ"
-                title="Video preview"
-                allowFullScreen
-              />
+              {embedUrl ? (
+                <iframe src={embedUrl} title="Video preview" allowFullScreen />
+              ) : (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-900 border border-zinc-800 text-zinc-400 p-6 text-center">
+                  <p className="text-sm font-medium text-zinc-200 mb-1">Video Walkthrough Slot</p>
+                  <p className="text-xs text-zinc-400">
+                    Paste a YouTube or Vimeo link under Edit Section &rarr; Embed Video URL.
+                  </p>
+                </div>
+              )}
             </div>
             <p className="muted text-sm cap">{renderEditable(sec.id, 'caption', data.caption || 'Project demo')}</p>
           </div>
         );
+      }
 
       case 'canvas':
         return (
           <div
-            className="wrap flex items-center justify-center border-2 border-dashed border-slate-700/50 rounded-xl"
-            style={{ minHeight: data.height || 300 }}
+            className="wrap flex items-center justify-center border border-dashed rounded-xl"
+            style={{ minHeight: data.height || 300, borderColor: 'var(--border)' }}
           >
-            <div className="text-center p-6 text-slate-500">
-              <p className="font-semibold text-slate-400">Freeform Canvas Area</p>
-              <p className="text-xs mt-1">Add floating 3D avatars, badges, text, or shapes anywhere in this space.</p>
+            <div className="text-center p-6 muted">
+              <p className="font-semibold" style={{ color: 'var(--text)' }}>
+                Freeform Canvas Area
+              </p>
+              <p className="text-xs mt-1">
+                Add floating 3D marks, avatars, text, or interactive buttons anywhere in this region.
+              </p>
             </div>
           </div>
         );
@@ -795,14 +869,15 @@ export const SiteCanvas: React.FC<SiteCanvasProps> = ({
     }
   };
 
-  // Compute Device Viewport Max Width
-  const getDeviceWidth = () => {
-    if (previewMode) return '100%';
-    if (customViewportWidth) return `${customViewportWidth}px`;
-    if (device === 'tablet') return '768px';
-    if (device === 'mobile') return '390px';
-    return '1280px';
-  };
+  // Compute Device Viewport Width (numeric for responsive fitting)
+  const numericDeviceWidth = device === 'tablet' ? 768 : device === 'mobile' ? 390 : 1280;
+  const horizontalGutter = containerWidth < 640 ? 16 : 48;
+  const availableWidth = Math.max(240, containerWidth - horizontalGutter);
+  const autoScale =
+    !previewMode && containerWidth > 0 && availableWidth < numericDeviceWidth
+      ? availableWidth / numericDeviceWidth
+      : 1;
+  const effectiveScale = previewMode ? 1 : Number((autoScale * canvasConfig.zoom).toFixed(3));
 
   // Compute Elevation & Shadow Style
   const getShadowStyle = () => {
@@ -825,17 +900,17 @@ export const SiteCanvas: React.FC<SiteCanvasProps> = ({
     if (previewMode) return 'p-0';
     switch (canvasConfig.canvasPadding) {
       case 'tight':
-        return 'p-3 sm:p-5';
+        return 'p-2 sm:p-5';
       case 'spacious':
-        return 'p-8 sm:p-14';
+        return 'p-3 sm:p-12';
       case 'normal':
       default:
-        return 'p-5 sm:p-9';
+        return 'p-2 sm:p-8';
     }
   };
 
   const handleZoom = (delta: number) => {
-    const next = Math.min(Math.max(parseFloat((canvasConfig.zoom + delta).toFixed(2)), 0.4), 2.0);
+    const next = Math.min(Math.max(parseFloat((canvasConfig.zoom + delta).toFixed(2)), 0.5), 1.6);
     updateCanvasConfig({ zoom: next });
   };
 
@@ -843,18 +918,13 @@ export const SiteCanvas: React.FC<SiteCanvasProps> = ({
     updateCanvasConfig({ zoom: 1 });
   };
 
-  const handleFitZoom = () => {
-    if (!containerRef.current) return;
-    const cw = containerRef.current.clientWidth - 80;
-    const targetW = device === 'mobile' ? 390 : device === 'tablet' ? 768 : 1280;
-    const ratio = Math.min(Math.max(parseFloat((cw / targetW).toFixed(2)), 0.4), 1.2);
-    updateCanvasConfig({ zoom: ratio });
-  };
+  const selectedSecObj = project.sections.find(s => s.id === selectedSectionId);
+  const selectedSecLabel = selectedSecObj ? SECTION_META[selectedSecObj.type]?.label || selectedSecObj.type : null;
 
   return (
     <div
       ref={containerRef}
-      className={`flex-1 overflow-auto flex flex-col items-center justify-start min-h-0 select-text relative transition-colors duration-200 ${getCanvasPaddingClass()}`}
+      className={`flex-1 overflow-y-auto overflow-x-hidden flex flex-col items-center justify-start min-h-0 select-text relative transition-colors duration-200 ${getCanvasPaddingClass()}`}
       style={getCanvasBackgroundStyle()}
       onClick={() => {
         if (!previewMode) {
@@ -862,296 +932,246 @@ export const SiteCanvas: React.FC<SiteCanvasProps> = ({
         }
       }}
     >
-      {/* Google Stitch Canvas Studio Workbench HUD (Hidden in Fullscreen Preview Mode) */}
+      {/* Clean Single-Row Workbench Canvas Bar */}
       {!previewMode && (
         <div
-          className="sticky top-2 z-40 mb-4 flex flex-wrap items-center justify-between gap-2 px-3 py-2 bg-slate-900/90 hover:bg-slate-900/95 border border-slate-700/80 rounded-2xl shadow-xl backdrop-blur-md text-xs text-slate-300 max-w-4xl w-full transition-all"
+          className="sticky top-1.5 z-30 mb-3 flex items-center justify-between gap-2 px-3 py-1.5 bg-zinc-950/95 border border-zinc-800 rounded-xl shadow-lg backdrop-blur-md text-xs text-zinc-300 max-w-4xl w-full transition-colors"
           onClick={e => e.stopPropagation()}
         >
-          {/* Left: Live Dimensions & Custom Width Override */}
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-950/80 border border-slate-800 text-[11px] font-mono text-indigo-300">
-              {device === 'desktop' && <Laptop className="w-3.5 h-3.5 text-slate-400" />}
-              {device === 'tablet' && <Tablet className="w-3.5 h-3.5 text-slate-400" />}
-              {device === 'mobile' && <Smartphone className="w-3.5 h-3.5 text-slate-400" />}
-              <span>{getDeviceWidth()}</span>
+          {/* Left: Device Width & Active Section */}
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-zinc-900 border border-zinc-800 text-[11px] font-mono text-zinc-200 tabular-nums shrink-0">
+              {device === 'desktop' && <Laptop className="w-3.5 h-3.5 text-zinc-400" />}
+              {device === 'tablet' && <Tablet className="w-3.5 h-3.5 text-zinc-400" />}
+              {device === 'mobile' && <Smartphone className="w-3.5 h-3.5 text-zinc-400" />}
+              <span>{numericDeviceWidth}px</span>
             </div>
 
-            {/* Quick Resolution Preset Pills */}
-            <div className="hidden lg:flex items-center gap-1 text-[11px]">
-              <button
-                onClick={() => setCustomViewportWidth(null)}
-                className={`px-2 py-0.5 rounded-lg border transition-all ${
-                  customViewportWidth === null
-                    ? 'border-indigo-500 bg-indigo-950/40 text-white font-medium'
-                    : 'border-slate-800 text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                Auto
-              </button>
-              <button
-                onClick={() => setCustomViewportWidth(1440)}
-                className={`px-2 py-0.5 rounded-lg border transition-all ${
-                  customViewportWidth === 1440
-                    ? 'border-indigo-500 bg-indigo-950/40 text-white font-medium'
-                    : 'border-slate-800 text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                1440px
-              </button>
-              <button
-                onClick={() => setCustomViewportWidth(1024)}
-                className={`px-2 py-0.5 rounded-lg border transition-all ${
-                  customViewportWidth === 1024
-                    ? 'border-indigo-500 bg-indigo-950/40 text-white font-medium'
-                    : 'border-slate-800 text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                1024px
-              </button>
-            </div>
+            {selectedSecLabel && (
+              <span className="hidden sm:inline text-[11px] text-zinc-400 truncate">
+                Selected: <strong className="text-zinc-200 font-medium">{selectedSecLabel}</strong>
+              </span>
+            )}
           </div>
 
-          {/* Center: Canvas Pattern Selector Pills */}
-          <div className="flex items-center gap-1 bg-slate-950/70 p-1 rounded-xl border border-slate-800">
-            {(['dots', 'grid', 'blueprint', 'isometric', 'glow', 'solid'] as CanvasPattern[]).map(pat => (
+          {/* Right: Zoom Controls & Backdrop Settings */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <div className="flex items-center bg-zinc-900 p-0.5 rounded-md border border-zinc-800">
               <button
-                key={pat}
-                onClick={() => updateCanvasConfig({ pattern: pat })}
-                className={`px-2 py-0.5 rounded-lg capitalize text-[10px] font-medium transition-all ${
-                  canvasConfig.pattern === pat
-                    ? 'bg-indigo-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-                }`}
-                title={`Switch canvas pattern to ${pat}`}
-              >
-                {pat}
-              </button>
-            ))}
-          </div>
-
-          {/* Right: Zoom Controls & Stitch Studio Settings Trigger */}
-          <div className="flex items-center gap-2">
-            {/* Zoom Controls */}
-            <div className="flex items-center bg-slate-950/80 p-0.5 rounded-xl border border-slate-800">
-              <button
+                type="button"
                 onClick={() => handleZoom(-0.1)}
-                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-                title="Zoom Out (Ctrl -)"
+                className="p-1.5 sm:p-1 rounded text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer"
+                title="Zoom Out"
               >
                 <ZoomOut className="w-3.5 h-3.5" />
               </button>
               <button
+                type="button"
                 onClick={handleResetZoom}
-                className="px-1.5 py-0.5 text-[11px] font-mono text-slate-300 hover:text-white"
-                title="Click to reset to 100%"
+                className="px-1.5 py-0.5 text-[11px] font-mono text-zinc-300 hover:text-white tabular-nums cursor-pointer"
+                title="Reset to Fit"
               >
-                {Math.round(canvasConfig.zoom * 100)}%
+                {Math.round(effectiveScale * 100)}%
               </button>
               <button
+                type="button"
                 onClick={() => handleZoom(0.1)}
-                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-                title="Zoom In (Ctrl +)"
+                className="p-1.5 sm:p-1 rounded text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer"
+                title="Zoom In"
               >
                 <ZoomIn className="w-3.5 h-3.5" />
               </button>
-              <button
-                onClick={handleFitZoom}
-                className="px-1.5 py-0.5 text-[10px] text-indigo-400 hover:text-indigo-300 font-semibold border-l border-slate-800"
-                title="Fit canvas to screen"
-              >
-                Fit
-              </button>
             </div>
 
-            {/* Quick Backdrop Theme Chips */}
-            <div className="hidden sm:flex items-center gap-1 bg-slate-950/80 p-1 rounded-xl border border-slate-800">
-              {CANVAS_BACKDROP_PRESETS.slice(0, 4).map(pre => (
-                <button
-                  key={pre.id}
-                  onClick={() => updateCanvasConfig({ bgColor: pre.color })}
-                  className={`w-4 h-4 rounded-full border transition-all ${
-                    canvasConfig.bgColor.toLowerCase() === pre.color.toLowerCase()
-                      ? 'border-indigo-400 ring-2 ring-indigo-500/50 scale-110'
-                      : 'border-white/10 hover:scale-105'
-                  }`}
-                  style={{ backgroundColor: pre.color }}
-                  title={`Canvas Color: ${pre.name}`}
-                />
-              ))}
-            </div>
-
-            {/* Canvas Customizer Popover Trigger */}
             <button
+              type="button"
               onClick={() => setIsStudioControlsOpen(true)}
-              className="p-1.5 px-2.5 rounded-xl bg-gradient-to-r from-indigo-600/30 to-purple-600/30 hover:from-indigo-600/50 hover:to-purple-600/50 text-indigo-300 border border-indigo-500/40 text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all"
-              title="Customize Google Stitch Background Canvas & Frame"
+              className="px-2.5 py-1.5 sm:py-1 rounded-md bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap"
+              title="Customize canvas backdrop, grid pattern, frame style, and shadows"
             >
-              <Sliders className="w-3.5 h-3.5 text-indigo-400" />
-              <span className="hidden md:inline">Canvas Studio</span>
+              <Sliders className="w-3.5 h-3.5 text-blue-400" />
+              <span className="hidden sm:inline">Backdrop</span>
             </button>
           </div>
         </div>
       )}
 
-      {/* Scaled Canvas Container with Zoom Transform */}
+      {/* Responsive Auto-Fit Scaled Canvas Container */}
       <div
-        className="w-full flex justify-center transition-transform duration-150 ease-out"
+        className="w-full flex justify-center overflow-x-hidden"
         style={{
-          transform: `scale(${canvasConfig.zoom})`,
-          transformOrigin: 'top center',
+          height:
+            !previewMode && frameHeight > 0 && effectiveScale !== 1
+              ? `${Math.ceil(frameHeight * effectiveScale) + 16}px`
+              : 'auto',
         }}
       >
-        {/* Device Viewport Outer Card */}
         <div
-          className="w-full transition-all duration-300 relative overflow-hidden"
+          className="transition-transform duration-150 ease-out"
           style={{
-            maxWidth: getDeviceWidth(),
-            borderRadius: previewMode ? 0 : `${canvasConfig.frameRadius}px`,
-            boxShadow: getShadowStyle(),
-            border: previewMode
-              ? 'none'
-              : canvasConfig.frameStyle === 'frameless'
-              ? 'none'
-              : '1px solid rgba(255, 255, 255, 0.1)',
+            width: previewMode ? '100%' : `${numericDeviceWidth}px`,
+            flexShrink: 0,
+            transform: effectiveScale !== 1 ? `scale(${effectiveScale})` : undefined,
+            transformOrigin: 'top center',
           }}
         >
-          {/* Google Stitch / macOS Studio Window Browser Chrome */}
-          {!previewMode && canvasConfig.frameStyle === 'browser' && (
-            <div className="bg-slate-900 border-b border-slate-800 px-3 py-2 flex items-center justify-between gap-3 select-none">
-              {/* macOS Traffic Light Buttons */}
-              <div className="flex items-center gap-1.5 shrink-0">
-                <span className="w-3 h-3 rounded-full bg-[#ff5f56] border border-[#e0443e] flex items-center justify-center text-[7px] text-[#7a0d0d] font-bold group hover:opacity-90">
-                  <span className="opacity-0 hover:opacity-100">×</span>
-                </span>
-                <span className="w-3 h-3 rounded-full bg-[#ffbd2e] border border-[#dea123] flex items-center justify-center text-[7px] text-[#7d5000] font-bold hover:opacity-90">
-                  <span className="opacity-0 hover:opacity-100">–</span>
-                </span>
-                <span className="w-3 h-3 rounded-full bg-[#27c93f] border border-[#1aab29] flex items-center justify-center text-[7px] text-[#004e0a] font-bold hover:opacity-90">
-                  <span className="opacity-0 hover:opacity-100">+</span>
-                </span>
+          {/* Device Viewport Outer Card */}
+          <div
+            ref={frameRef}
+            className="w-full transition-all duration-300 relative overflow-hidden"
+            style={{
+              borderRadius: previewMode ? 0 : `${canvasConfig.frameRadius}px`,
+              boxShadow: getShadowStyle(),
+              border: previewMode
+                ? 'none'
+                : canvasConfig.frameStyle === 'frameless'
+                ? 'none'
+                : '1px solid rgba(255, 255, 255, 0.1)',
+            }}
+          >
+            {/* Minimal Studio Browser Bar */}
+            {!previewMode && canvasConfig.frameStyle === 'browser' && (
+              <div className="bg-zinc-900 border-b border-zinc-800 px-3 py-2 flex items-center justify-between gap-3 select-none">
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="w-2.5 h-2.5 rounded-full bg-zinc-700" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-zinc-700" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-zinc-700" />
+                </div>
+
+                <div className="flex-1 max-w-md mx-auto flex items-center gap-1.5 px-3 py-1 rounded bg-zinc-950 border border-zinc-800 text-[11px] text-zinc-300">
+                  <Lock className="w-3 h-3 text-emerald-500 shrink-0" />
+                  <span className="truncate text-zinc-400 font-mono">
+                    {canvasConfig.browserUrl || 'https://preview.sitecraft.dev'}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0 text-[10px] text-zinc-500 font-mono">
+                  <span className="uppercase">{device}</span>
+                </div>
               </div>
+            )}
 
-              {/* URL Address Bar */}
-              <div className="flex-1 max-w-md mx-auto flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-950/80 border border-slate-800/80 text-[11px] text-slate-300">
-                <Lock className="w-3 h-3 text-emerald-400 shrink-0" />
-                <span className="truncate text-slate-400 font-mono">
-                  {canvasConfig.browserUrl || 'https://preview.sitecraft.dev'}
-                </span>
-                <RefreshCw className="w-3 h-3 text-slate-500 hover:text-slate-300 cursor-pointer ml-auto shrink-0" />
+            {/* Smartphone Bezel */}
+            {!previewMode && canvasConfig.frameStyle === 'device_bezel' && device === 'mobile' && (
+              <div className="w-full bg-zinc-950 border-b border-zinc-800 py-1.5 flex justify-center items-center">
+                <div className="w-20 h-4 bg-black rounded-full flex items-center justify-center gap-2 border border-zinc-800">
+                  <span className="w-1.5 h-1.5 rounded-full bg-zinc-800" />
+                </div>
               </div>
+            )}
 
-              {/* Window Right Indicator */}
-              <div className="flex items-center gap-2 shrink-0 text-[10px] text-slate-500 font-mono">
-                <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">
-                  {device === 'desktop' ? 'DESKTOP' : device === 'tablet' ? 'TABLET' : 'MOBILE'}
-                </span>
-              </div>
-            </div>
-          )}
+            {/* Main Website Content Canvas */}
+            <div className="site fx-on" style={themeStyles as React.CSSProperties}>
+              {project.sections
+                .filter(sec => sec.visible || !previewMode)
+                .map(sec => {
+                  const isSelected = selectedSectionId === sec.id;
+                  const TagName = sec.type === 'nav' ? 'header' : sec.type === 'footer' ? 'footer' : 'section';
+                  const secLabel = SECTION_META[sec.type]?.label || sec.type;
 
-          {/* Smartphone Hardware Bezel Overlay (iPhone Dynamic Island) */}
-          {!previewMode && canvasConfig.frameStyle === 'device_bezel' && device === 'mobile' && (
-            <div className="w-full bg-slate-900 border-b border-slate-800 py-1.5 flex justify-center items-center">
-              <div className="w-20 h-4 bg-black rounded-full flex items-center justify-center gap-2 border border-slate-800 shadow-inner">
-                <span className="w-2 h-2 rounded-full bg-slate-950 border border-slate-800" />
-                <span className="w-1.5 h-1.5 rounded-full bg-indigo-950" />
-              </div>
-            </div>
-          )}
-
-          {/* Main Website Content Canvas */}
-          <div className="site fx-on" style={themeStyles as React.CSSProperties}>
-            {project.sections
-              .filter(sec => sec.visible || !previewMode)
-              .map(sec => {
-                const isSelected = selectedSectionId === sec.id;
-                const TagName = sec.type === 'nav' ? 'header' : sec.type === 'footer' ? 'footer' : 'section';
-
-                return (
-                  <div
-                    key={sec.id}
-                    data-sec={sec.id}
-                    className={`frame relative group transition-all ${
-                      !previewMode ? 'cursor-pointer hover:ring-2 hover:ring-indigo-400/40' : ''
-                    } ${isSelected && !previewMode ? 'ring-2 ring-indigo-500' : ''} ${
-                      !sec.visible ? 'opacity-40' : ''
-                    }`}
-                    onClick={e => {
-                      if (!previewMode) {
-                        e.stopPropagation();
-                        onSelectSection(sec.id);
-                      }
-                    }}
-                  >
-                    {/* Floating Action Stool */}
-                    {!previewMode && isSelected && (
-                      <div
-                        className="absolute top-3 right-3 z-30 flex items-center gap-1 bg-slate-900/95 border border-indigo-500/80 rounded-lg p-1 shadow-xl backdrop-blur-md"
-                        onClick={e => e.stopPropagation()}
-                      >
-                        <button
-                          onClick={() => onSectionAction(sec.id, 'up')}
-                          title="Move Section Up"
-                          className="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white transition-colors"
-                        >
-                          <ArrowUp className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => onSectionAction(sec.id, 'down')}
-                          title="Move Section Down"
-                          className="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white transition-colors"
-                        >
-                          <ArrowDown className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => onSectionAction(sec.id, 'dup')}
-                          title="Duplicate Section"
-                          className="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white transition-colors"
-                        >
-                          <Copy className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => onSectionAction(sec.id, 'hide')}
-                          title={sec.visible ? 'Hide Section' : 'Show Section'}
-                          className="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white transition-colors"
-                        >
-                          {sec.visible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-                        </button>
-                        <button
-                          onClick={() => onSectionAction(sec.id, 'del')}
-                          title="Delete Section"
-                          className="p-1.5 rounded hover:bg-red-950 text-red-400 hover:text-red-300 transition-colors"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    )}
-
-                    <TagName
-                      id={sec.type === 'hero' ? 'top' : sec.type}
-                      className={`sec t-${sec.type} bg-${sec.style.bg || 'default'} pad-${
-                        sec.style.pad || 'md'
+                  return (
+                    <div
+                      key={sec.id}
+                      data-sec={sec.id}
+                      className={`frame relative group transition-all ${
+                        !previewMode ? 'cursor-pointer hover:ring-2 hover:ring-blue-400/40' : ''
+                      } ${isSelected && !previewMode ? 'ring-2 ring-blue-500' : ''} ${
+                        !sec.visible ? 'opacity-40' : ''
                       }`}
-                      data-anim={sec.anim && sec.anim !== 'none' ? sec.anim : undefined}
-                      data-tilt={sec.fx?.tilt ? '1' : undefined}
-                      data-spot={sec.fx?.spot ? '1' : undefined}
+                      onClick={e => {
+                        if (!previewMode) {
+                          e.stopPropagation();
+                          onSelectSection(sec.id);
+                        }
+                      }}
                     >
-                      {renderSectionMedia(sec)}
-                      <div className="content">{renderSectionContent(sec)}</div>
-                      {renderFloats(sec)}
-                    </TagName>
-                  </div>
-                );
-              })}
-          </div>
+                      {/* Floating Section Controls */}
+                      {!previewMode && isSelected && (
+                        <div
+                          className="absolute top-2.5 right-2.5 z-30 flex items-center gap-0.5 sm:gap-1 bg-zinc-950/95 border border-zinc-700 rounded-lg p-1 shadow-xl backdrop-blur-md"
+                          onClick={e => e.stopPropagation()}
+                        >
+                          <span className="hidden sm:inline px-2 text-[11px] font-medium text-zinc-300 border-r border-zinc-800 mr-0.5">
+                            {secLabel}
+                          </span>
+                          {onMobileEditSection && (
+                            <button
+                              type="button"
+                              onClick={onMobileEditSection}
+                              className="lg:hidden px-2.5 py-1.5 rounded bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium flex items-center gap-1 cursor-pointer mr-0.5"
+                              title="Edit this section"
+                            >
+                              <Pencil className="w-3 h-3" />
+                              <span>Edit</span>
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => onSectionAction(sec.id, 'up')}
+                            title="Move Section Up"
+                            className="p-2 sm:p-1.5 rounded hover:bg-zinc-800 text-zinc-300 hover:text-white transition-colors cursor-pointer"
+                          >
+                            <ArrowUp className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onSectionAction(sec.id, 'down')}
+                            title="Move Section Down"
+                            className="p-2 sm:p-1.5 rounded hover:bg-zinc-800 text-zinc-300 hover:text-white transition-colors cursor-pointer"
+                          >
+                            <ArrowDown className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onSectionAction(sec.id, 'dup')}
+                            title="Duplicate Section"
+                            className="p-2 sm:p-1.5 rounded hover:bg-zinc-800 text-zinc-300 hover:text-white transition-colors cursor-pointer"
+                          >
+                            <Copy className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onSectionAction(sec.id, 'hide')}
+                            title={sec.visible ? 'Hide Section' : 'Show Section'}
+                            className="p-2 sm:p-1.5 rounded hover:bg-zinc-800 text-zinc-300 hover:text-white transition-colors cursor-pointer"
+                          >
+                            {sec.visible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onSectionAction(sec.id, 'del')}
+                            title="Delete Section"
+                            className="p-2 sm:p-1.5 rounded hover:bg-rose-950 text-rose-400 hover:text-rose-300 transition-colors cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
 
-          {/* Smartphone Hardware Bottom Home Bar */}
-          {!previewMode && canvasConfig.frameStyle === 'device_bezel' && device === 'mobile' && (
-            <div className="w-full bg-slate-900 border-t border-slate-800 py-2 flex justify-center items-center">
-              <div className="w-32 h-1 bg-slate-600 rounded-full" />
+                      <TagName
+                        id={sec.type === 'hero' ? 'top' : sec.type}
+                        className={`sec t-${sec.type} bg-${sec.style.bg || 'default'} pad-${
+                          sec.style.pad || 'md'
+                        }`}
+                        data-anim={sec.anim && sec.anim !== 'none' ? sec.anim : undefined}
+                        data-tilt={sec.fx?.tilt ? '1' : undefined}
+                        data-spot={sec.fx?.spot ? '1' : undefined}
+                      >
+                        {renderSectionMedia(sec)}
+                        <div className="content">{renderSectionContent(sec)}</div>
+                        {renderFloats(sec)}
+                      </TagName>
+                    </div>
+                  );
+                })}
             </div>
-          )}
+
+            {!previewMode && canvasConfig.frameStyle === 'device_bezel' && device === 'mobile' && (
+              <div className="w-full bg-zinc-950 border-t border-zinc-800 py-2 flex justify-center items-center">
+                <div className="w-32 h-1 bg-zinc-700 rounded-full" />
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

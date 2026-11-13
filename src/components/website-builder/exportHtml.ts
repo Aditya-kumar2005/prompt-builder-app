@@ -260,18 +260,31 @@ export function generateStandaloneHtml(project: SiteProject): string {
           </div>`;
           break;
 
-        case 'video':
+        case 'video': {
+          const rawUrl = String(data.url || '').trim();
+          let embedUrl = '';
+          const ytMatch = rawUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]{6,})/);
+          if (ytMatch) {
+            embedUrl = `https://www.youtube-nocookie.com/embed/${ytMatch[1]}`;
+          } else if (rawUrl.includes('youtube-nocookie.com/embed/') || rawUrl.includes('player.vimeo.com/video/')) {
+            embedUrl = rawUrl;
+          }
           contentHtml = `<div class="wrap narrow center">
             <div class="head center">
               <h2>${esc(data.title)}</h2>
               <p class="lead">${esc(data.subtitle)}</p>
             </div>
             <div class="vwrap my-4">
-              <iframe src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ" allowfullscreen></iframe>
+              ${
+                embedUrl
+                  ? `<iframe src="${esc(embedUrl)}" allowfullscreen></iframe>`
+                  : `<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--surface);border:1px solid var(--border);color:var(--muted);font-family:var(--font-b);padding:24px;text-align:center;"><strong style="color:var(--text);margin-bottom:6px;">Video Walkthrough Slot</strong><span style="font-size:14px;">Set a YouTube or Vimeo embed URL in SiteCraft Inspector.</span></div>`
+              }
             </div>
             <p class="muted text-sm cap">${esc(data.caption)}</p>
           </div>`;
           break;
+        }
 
         case 'footer':
           contentHtml = `<div class="wrap between">
@@ -302,12 +315,10 @@ export function generateStandaloneHtml(project: SiteProject): string {
               inner = `<div class="fshape" style="width:${fl.w || 60}px;height:${fl.h || 60}px;border-radius:${fl.shape === 'circle' ? '50%' : fl.shape === 'pill' ? '999px' : '12px'};background:${fl.fill || 'var(--primary)'};"></div>`;
             } else if (fl.kind === 'threeLogo') {
               const tl = fl.threeLogoData || {};
-              inner = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px;background:rgba(15,23,42,0.88);border:1px solid ${tl.primaryColor || 'var(--primary)'}55;border-radius:16px;box-shadow:0 10px 25px -5px rgba(0,0,0,0.5);backdrop-filter:blur(8px);text-align:center;">
-                <div style="width:48px;height:48px;border-radius:12px;background:radial-gradient(circle, ${tl.primaryColor || '#6366f1'} 0%, ${tl.accentColor || '#a855f7'} 100%);margin-bottom:6px;box-shadow:0 0 16px ${tl.primaryColor || '#6366f1'}66;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:bold;font-size:18px;">
-                  ✦
-                </div>
-                <div style="font-size:11px;font-weight:700;color:#fff;letter-spacing:0.05em;">${esc(tl.name || '3D LOGO')}</div>
-                <div style="font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.1em;">${esc(tl.archetype || 'Procedural 3D')}</div>
+              inner = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px;background:rgba(9,9,11,0.92);border:1px solid ${tl.primaryColor || '#2563eb'}55;border-radius:12px;box-shadow:0 10px 25px -5px rgba(0,0,0,0.5);backdrop-filter:blur(8px);text-align:center;">
+                <div style="width:44px;height:44px;border-radius:8px;background:linear-gradient(135deg, ${tl.primaryColor || '#2563eb'} 0%, ${tl.secondaryColor || '#38bdf8'} 100%);margin-bottom:6px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;font-family:monospace;">3D</div>
+                <div style="font-size:11px;font-weight:700;color:#fff;letter-spacing:0.04em;">${esc(tl.name || '3D MARK')}</div>
+                <div style="font-size:9px;color:#a1a1aa;text-transform:uppercase;letter-spacing:0.08em;">${esc(tl.archetype || 'Procedural 3D')}</div>
               </div>`;
             }
 

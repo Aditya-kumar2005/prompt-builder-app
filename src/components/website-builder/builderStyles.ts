@@ -156,14 +156,17 @@ export const SITE_BUILDER_CSS = `
   gap: 12px;
 }
 .site .ico {
-  font-size: 1.6rem;
-  width: 50px;
-  height: 50px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  font-family: var(--font-h);
+  width: 44px;
+  height: 44px;
   display: grid;
   place-items: center;
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: calc(var(--radius) * 0.7);
+  color: var(--primary);
   flex: none;
 }
 .site .pcard { padding: 0; overflow: hidden; transition: transform 0.2s; }

@@ -1,31 +1,18 @@
 /**
  * LandingPage Component
- * High-converting, interactive landing page explaining what SiteCraft Studio is,
- * why users should use it, key value propositions, live feature showcases, and quick start launchpads.
+ * Clean editorial product landing page built around the 60-30-10 obsidian workbench aesthetic.
  */
-import React from 'react';
+import React, { useState } from 'react';
 import {
-  Sparkles,
+  ArrowRight,
   Globe,
   Wand2,
-  Palette,
-  LayoutTemplate,
-  Layers,
-  ArrowRight,
-  Download,
-  Code2,
-  Cpu,
-  CheckCircle2,
-  ShieldCheck,
-  Eye,
   Sliders,
-  Maximize2,
-  ExternalLink,
-  Laptop,
-  Smartphone,
-  Tablet,
   Box,
+  Download,
+  Palette,
 } from 'lucide-react';
+import heroWorkbenchImg from '../assets/images/studio_workbench_hero_1794540118773.jpg';
 
 interface LandingPageProps {
   onNavigate: (view: 'home' | 'builder' | 'prompt_builder' | 'settings') => void;
@@ -33,182 +20,118 @@ interface LandingPageProps {
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, hasApiKeys }) => {
+  const [imgError, setImgError] = useState(false);
+
   return (
-    <div className="flex-1 overflow-y-auto bg-slate-950 text-slate-100 select-text">
+    <div className="flex-1 overflow-y-auto bg-zinc-950 text-zinc-100 select-text">
       {/* 1. HERO SECTION */}
-      <section className="relative overflow-hidden pt-12 pb-20 px-4 sm:px-6 lg:px-8 border-b border-slate-900">
-        {/* Ambient background glows */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[350px] bg-gradient-to-b from-purple-600/20 via-indigo-600/10 to-transparent blur-3xl pointer-events-none -z-10" />
-        <div className="absolute top-1/3 left-10 w-72 h-72 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none -z-10" />
-        <div className="absolute top-1/3 right-10 w-72 h-72 bg-purple-500/10 rounded-full blur-3xl pointer-events-none -z-10" />
-
-        <div className="max-w-5xl mx-auto text-center space-y-6">
-          {/* Eyebrow badge */}
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/25 text-purple-300 text-xs font-semibold shadow-sm animate-pulse">
-            <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-            <span>THE ALL-IN-ONE AI WEB BUILDER & PROMPT STUDIO</span>
-          </div>
-
-          {/* Main Headline */}
-          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-tight">
-            Build Live Responsive Websites.{' '}
-            <span className="bg-gradient-to-r from-purple-400 via-indigo-300 to-cyan-400 bg-clip-text text-transparent">
-              Engineer Elite AI Prompts.
-            </span>
-          </h1>
-
-          {/* Subtitle */}
-          <p className="max-w-3xl mx-auto text-sm sm:text-base lg:text-lg text-slate-400 leading-relaxed">
-            SiteCraft Studio merges an interactive <span className="text-white font-medium">Google Stitch canvas website builder</span>,
-            procedural <span className="text-indigo-300 font-medium">Three.js 3D brand marks</span>, and a comprehensive
-            <span className="text-purple-300 font-medium"> Multi-Engine Prompt Engineering Suite</span> for Midjourney, DALL-E, Flux, Claude, and Gemini.
-          </p>
-
-          {/* Call-to-action buttons */}
-          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-            <button
-              onClick={() => onNavigate('builder')}
-              className="px-6 py-3.5 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-sm shadow-xl shadow-indigo-600/25 flex items-center gap-2 transition-all cursor-pointer transform hover:-translate-y-0.5"
-            >
-              <Globe className="w-4 h-4" />
-              <span>Launch Website Studio</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-
-            <button
-              onClick={() => onNavigate('prompt_builder')}
-              className="px-6 py-3.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 hover:text-white border border-slate-700/80 hover:border-purple-500/50 font-semibold text-sm transition-all cursor-pointer flex items-center gap-2"
-            >
-              <Wand2 className="w-4 h-4 text-purple-400" />
-              <span>Open Prompt Studio</span>
-            </button>
-
-            {!hasApiKeys && (
-              <button
-                onClick={() => onNavigate('settings')}
-                className="px-4 py-3.5 rounded-xl bg-slate-900/60 hover:bg-slate-800 text-slate-400 hover:text-indigo-300 border border-slate-800 text-xs font-mono transition-all cursor-pointer flex items-center gap-1.5"
-              >
-                <Cpu className="w-3.5 h-3.5" />
-                <span>AI Providers</span>
-              </button>
-            )}
-          </div>
-
-          {/* Quick value badges */}
-          <div className="flex flex-wrap justify-center items-center gap-6 pt-6 text-xs text-slate-400 font-medium border-t border-slate-900/80">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              <span>Zero-code live editing</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              <span>Three.js 3D Procedural Logos</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              <span>Google Stitch Workbench Canvas</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              <span>Single-File HTML Export</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Hero Interactive Studio Mockup Banner */}
-        <div className="max-w-5xl mx-auto mt-12 rounded-2xl border border-slate-800/80 bg-slate-900/70 p-2 shadow-2xl backdrop-blur-md">
-          {/* Mockup macOS Window Titlebar */}
-          <div className="bg-slate-950 px-4 py-2.5 rounded-t-xl border-b border-slate-850 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-[#ff5f56]" />
-              <span className="w-3 h-3 rounded-full bg-[#ffbd2e]" />
-              <span className="w-3 h-3 rounded-full bg-[#27c93f]" />
-              <span className="text-xs font-mono text-slate-400 ml-2">sitecraft.dev/live-studio</span>
-            </div>
-            <div className="flex items-center gap-2 text-xs text-slate-500 font-mono">
-              <span className="px-2 py-0.5 rounded bg-slate-900 text-indigo-400 border border-slate-800">
-                1280 × 800 (Desktop)
-              </span>
-              <span className="px-2 py-0.5 rounded bg-purple-950/60 text-purple-300 border border-purple-500/30">
-                Google Stitch Canvas
-              </span>
-            </div>
-          </div>
-
-          {/* Mockup Viewport Body */}
-          <div
-            className="p-6 sm:p-10 rounded-b-xl flex flex-col md:flex-row items-center justify-between gap-8"
-            style={{
-              backgroundColor: '#090d16',
-              backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.08) 1.5px, transparent 0)',
-              backgroundSize: '24px 24px',
-            }}
-          >
-            {/* Left simulated live site card */}
-            <div className="flex-1 bg-slate-900/95 border border-slate-800 rounded-xl p-6 shadow-2xl space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold text-xs">
-                    ✦
-                  </div>
-                  <span className="font-bold text-sm text-white">Nova Systems</span>
+      <section className="border-b border-zinc-900">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 lg:py-20">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-stretch">
+            {/* Left Copy Column */}
+            <div className="lg:col-span-6 flex flex-col justify-between space-y-8">
+              <div className="space-y-5">
+                <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-400 font-mono">
+                  <span>Visual Web Builder</span>
+                  <span aria-hidden="true">·</span>
+                  <span>Prompt Architecture</span>
+                  <span aria-hidden="true">·</span>
+                  <span>Single-File Export</span>
                 </div>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-                  Live Editable
-                </span>
-              </div>
-              <div className="space-y-2">
-                <div className="text-[11px] font-semibold text-indigo-400 uppercase tracking-wider">
-                  Next-Gen Cloud Architecture
-                </div>
-                <h3 className="text-xl font-bold text-white">
-                  Intelligent systems built for hyper-scale agility.
-                </h3>
-                <p className="text-xs text-slate-400">
-                  Experience instantaneous deployment and dynamic visual components with in-place text updates and real-time canvas preview.
-                </p>
-              </div>
-              <div className="flex items-center gap-2 pt-2">
-                <button
-                  onClick={() => onNavigate('builder')}
-                  className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition"
+
+                <h1
+                  className="font-display font-bold tracking-tight text-zinc-50 leading-[1.08]"
+                  style={{
+                    fontSize: 'clamp(2.25rem, 4vw, 3.5rem)',
+                    textWrap: 'balance',
+                  }}
                 >
-                  Edit in Studio →
-                </button>
-                <span className="text-[11px] text-slate-500 font-mono">10+ Layout Archetypes</span>
+                  Build responsive websites and structured AI prompts in one studio.
+                </h1>
+
+                <p className="text-base text-zinc-400 leading-relaxed max-w-xl">
+                  Edit live sections directly on a customizable canvas, generate 3D brand marks and WCAG-compliant color systems, refine prompts across Gemini, Claude, and OpenAI, and export clean standalone HTML without platform lock-in.
+                </p>
+
+                {/* Primary & Secondary Actions */}
+                <div className="flex flex-wrap items-center gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => onNavigate('builder')}
+                    className="px-5 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm transition-colors flex items-center gap-2 cursor-pointer whitespace-nowrap"
+                  >
+                    <Globe className="w-4 h-4" />
+                    <span>Open Website Studio</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => onNavigate('prompt_builder')}
+                    className="px-5 py-2.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 font-medium text-sm transition-colors flex items-center gap-2 cursor-pointer whitespace-nowrap"
+                  >
+                    <Wand2 className="w-4 h-4 text-zinc-400" />
+                    <span>Prompt Studio</span>
+                  </button>
+
+                  {!hasApiKeys && (
+                    <button
+                      type="button"
+                      onClick={() => onNavigate('settings')}
+                      className="px-3 py-2.5 text-xs font-medium text-zinc-400 hover:text-zinc-100 underline underline-offset-4 cursor-pointer whitespace-nowrap"
+                    >
+                      Add API Keys
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Grounded Spec Strip (Tabular Numerals) */}
+              <div className="grid grid-cols-3 gap-6 pt-6 border-t border-zinc-900">
+                <div>
+                  <div className="font-mono text-xl font-semibold text-zinc-100 tabular-nums">10+</div>
+                  <div className="text-xs text-zinc-400 mt-0.5">Layout archetypes</div>
+                </div>
+                <div>
+                  <div className="font-mono text-xl font-semibold text-zinc-100 tabular-nums">3 Engines</div>
+                  <div className="text-xs text-zinc-400 mt-0.5">Gemini, Claude, OpenAI</div>
+                </div>
+                <div>
+                  <div className="font-mono text-xl font-semibold text-zinc-100 tabular-nums">1 File</div>
+                  <div className="text-xs text-zinc-400 mt-0.5">Portable HTML export</div>
+                </div>
               </div>
             </div>
 
-            {/* Right simulated 3D brand logo & prompt engine teaser */}
-            <div className="w-full md:w-80 space-y-3">
-              <div className="bg-slate-900/90 border border-purple-500/30 rounded-xl p-4 shadow-xl space-y-2">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-white flex items-center gap-1.5">
-                    <Box className="w-3.5 h-3.5 text-purple-400" />
-                    Three.js 3D Brand Mark
-                  </span>
-                  <span className="text-[10px] font-mono text-purple-300">PBR Studio</span>
+            {/* Right Visual Carrier Column */}
+            <div className="lg:col-span-6 flex flex-col">
+              <div className="flex-1 rounded-xl border border-zinc-800 bg-zinc-900 overflow-hidden flex flex-col">
+                <div className="relative flex-1 min-h-[280px] lg:min-h-[380px] bg-zinc-900">
+                  {!imgError ? (
+                    <img
+                      src={heroWorkbenchImg}
+                      alt="Minimalist studio display showing layout grid geometry beside anodized mechanical dial and calipers"
+                      referrerPolicy="no-referrer"
+                      onError={() => setImgError(true)}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center p-8 text-center bg-zinc-900">
+                      <Box className="w-10 h-10 text-zinc-600 mb-3" />
+                      <p className="text-sm font-medium text-zinc-300">SiteCraft Studio Workbench</p>
+                      <p className="text-xs text-zinc-500 mt-1">Responsive layout grids and procedural 3D tooling</p>
+                    </div>
+                  )}
                 </div>
-                <div className="h-28 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-center relative overflow-hidden group">
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-600 rotate-12 flex items-center justify-center text-white font-bold text-2xl shadow-lg shadow-purple-600/50 group-hover:rotate-45 transition-transform duration-500">
-                    ✦
-                  </div>
-                  <div className="absolute bottom-2 left-2 text-[9px] font-mono text-slate-500">
-                    Orbit &amp; Deconstruct Controls
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-3 text-xs space-y-1">
-                <div className="font-bold text-white flex items-center justify-between">
-                  <span className="flex items-center gap-1.5">
-                    <Wand2 className="w-3.5 h-3.5 text-indigo-400" />
-                    Prompt Studio Engine
-                  </span>
-                  <span className="text-[10px] font-mono text-emerald-400">Ready</span>
-                </div>
-                <div className="text-[11px] text-slate-400 font-mono line-clamp-1">
-                  Midjourney v6.1 • DALL-E 3 • Flux.1 • Canva
+                <div className="px-4 py-3 border-t border-zinc-800 bg-zinc-950/80 flex items-center justify-between text-xs text-zinc-400 font-mono">
+                  <span>Responsive Canvas · 1280 / 768 / 390</span>
+                  <button
+                    type="button"
+                    onClick={() => onNavigate('builder')}
+                    className="text-blue-400 hover:text-blue-300 transition-colors cursor-pointer whitespace-nowrap"
+                  >
+                    Launch editor →
+                  </button>
                 </div>
               </div>
             </div>
@@ -216,183 +139,209 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, hasApiKeys
         </div>
       </section>
 
-      {/* 2. WHY SITECRAFT STUDIO? (CORE VALUE PILLARS) */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto space-y-12">
-        <div className="text-center space-y-3">
-          <h2 className="text-xs font-mono uppercase tracking-widest text-indigo-400">
-            Why Professionals &amp; Creators Use SiteCraft
+      {/* 2. CORE WORKSPACE CAPABILITIES (Editorial 01-04 Grid) */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-20">
+        <div className="max-w-2xl mb-12 space-y-2">
+          <p className="text-xs font-mono text-zinc-400">Architecture</p>
+          <h2
+            className="font-display font-bold tracking-tight text-zinc-50"
+            style={{ fontSize: 'clamp(1.5rem, 3vw, 2.25rem)', textWrap: 'balance' }}
+          >
+            Four integrated tools built to ship real pages and tested prompts.
           </h2>
-          <h3 className="text-2xl sm:text-4xl font-extrabold text-white">
-            Everything You Need To Create, Validate &amp; Deploy
-          </h3>
-          <p className="max-w-2xl mx-auto text-xs sm:text-sm text-slate-400">
-            Traditional website builders lock you into closed platforms. Standalone prompt tools give you weak text.
-            SiteCraft bridges both with real code export and production-grade AI models.
-          </p>
         </div>
 
-        {/* 5 Core Feature Pillar Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Card 1: Google Stitch Canvas */}
-          <div className="bg-slate-900/60 border border-slate-800 hover:border-indigo-500/50 rounded-2xl p-6 space-y-3 transition-all hover:shadow-xl hover:shadow-indigo-600/10">
-            <div className="w-10 h-10 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
-              <Sliders className="w-5 h-5" />
-            </div>
-            <h4 className="text-base font-bold text-white">Google Stitch Background Canvas</h4>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Work on an infinite studio workbench with customizable patterns: Google Stitch dots, drafting grid, blueprint lines, isometric matrix, or spotlight glow.
-              Full zoom from 25% to 200% with hardware bezel mockups (iPhone 16 Pro Dynamic Island &amp; MacBook).
-            </p>
-          </div>
-
-          {/* Card 2: AI Brand Kit & 3D Three.js Logos */}
-          <div className="bg-slate-900/60 border border-slate-800 hover:border-purple-500/50 rounded-2xl p-6 space-y-3 transition-all hover:shadow-xl hover:shadow-purple-600/10">
-            <div className="w-10 h-10 rounded-xl bg-purple-600/20 border border-purple-500/30 flex items-center justify-center text-purple-400">
-              <Box className="w-5 h-5" />
-            </div>
-            <h4 className="text-base font-bold text-white">Gemini 3.8 Flash 3D Brand Kit</h4>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Generate cohesive 7-color palettes (WCAG AA compliant), Google font pairings, and 3 distinct procedural Three.js 3D logo concepts.
-              Inspect models with smooth orbit damping, studio PBR lighting, and an interactive Deconstruct Explode slider.
-            </p>
-          </div>
-
-          {/* Card 3: Unified Layout Templates */}
-          <div className="bg-slate-900/60 border border-slate-800 hover:border-cyan-500/50 rounded-2xl p-6 space-y-3 transition-all hover:shadow-xl hover:shadow-cyan-600/10">
-            <div className="w-10 h-10 rounded-xl bg-cyan-600/20 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
-              <LayoutTemplate className="w-5 h-5" />
-            </div>
-            <h4 className="text-base font-bold text-white">Merged Template Studio</h4>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Seamlessly switch between 10+ pre-designed responsive layouts: Web Developer Portfolio, SaaS Landing, Enterprise Systems, UI/UX Agency, and Minimal Portals.
-              Add, rearrange, duplicate, and customize sections with in-place text editing.
-            </p>
-          </div>
-
-          {/* Card 4: Dedicated Visual Image Prompt App */}
-          <div className="bg-slate-900/60 border border-slate-800 hover:border-purple-500/50 rounded-2xl p-6 space-y-3 transition-all hover:shadow-xl hover:shadow-purple-600/10">
-            <div className="w-10 h-10 rounded-xl bg-purple-600/20 border border-purple-500/30 flex items-center justify-center text-purple-400">
-              <Palette className="w-5 h-5" />
-            </div>
-            <h4 className="text-base font-bold text-white">Visual Image Prompt Studio</h4>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Generate 4-way prompt expansions tailored for Midjourney v6.1 (with --ar and --s flags), DALL-E 3, Flux.1, and Canva.
-              Includes 12 art styles, camera optics, lighting atmospheres, negative prompt filters, and 1-click bulk export (.TXT / .MD / .JSON).
-            </p>
-          </div>
-
-          {/* Card 5: Multi-Engine Universal Prompt Doctor */}
-          <div className="bg-slate-900/60 border border-slate-800 hover:border-emerald-500/50 rounded-2xl p-6 space-y-3 transition-all hover:shadow-xl hover:shadow-emerald-600/10">
-            <div className="w-10 h-10 rounded-xl bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-              <Wand2 className="w-5 h-5" />
-            </div>
-            <h4 className="text-base font-bold text-white">Multi-Engine Prompt Doctor</h4>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Turn vague ideas into structured prompts with XML guardrails, System Role Architectures, Chain-of-Thought scratchpads, and Clean TypeScript coders.
-              Test run outputs live with Gemini, Claude, or OpenAI.
-            </p>
-          </div>
-
-          {/* Card 6: Standalone Single-File Export */}
-          <div className="bg-slate-900/60 border border-slate-800 hover:border-amber-500/50 rounded-2xl p-6 space-y-3 transition-all hover:shadow-xl hover:shadow-amber-600/10">
-            <div className="w-10 h-10 rounded-xl bg-amber-600/20 border border-amber-500/30 flex items-center justify-center text-amber-400">
-              <Download className="w-5 h-5" />
-            </div>
-            <h4 className="text-base font-bold text-white">Zero Vendor Lock-In Export</h4>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Export your finished site as a clean, standalone, single-file <code className="text-amber-300">index.html</code> with all CSS variables, typography, and interactive FX runtime inlined.
-              Host on GitHub Pages, Vercel, Netlify, or standard servers without build steps.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* 3. WHO IS SITECRAFT FOR? */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-slate-900/40 border-y border-slate-900">
-        <div className="max-w-5xl mx-auto space-y-8">
-          <div className="text-center space-y-2">
-            <h3 className="text-xs font-mono uppercase tracking-widest text-purple-400">Target Audiences</h3>
-            <h2 className="text-2xl sm:text-3xl font-bold text-white">Crafted For High-Speed Modern Workflows</h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-slate-950 p-6 rounded-2xl border border-slate-850 space-y-3">
-              <span className="text-2xl">⚡</span>
-              <h4 className="text-sm font-bold text-white">Founders &amp; Indie Hackers</h4>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Go from product concept to live responsive website with cohesive brand palettes and 3D marks in under 10 minutes.
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+          {/* Capability 01 — Featured Wide */}
+          <div className="md:col-span-7 bg-zinc-900/50 border border-zinc-800 rounded-xl p-6 sm:p-8 flex flex-col justify-between space-y-6">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-xs text-zinc-400 font-mono">
+                <span>01. Website &amp; Layout Studio</span>
+                <Sliders className="w-4 h-4 text-zinc-500" />
+              </div>
+              <h3 className="font-display text-xl font-semibold text-zinc-50">
+                Customizable Stitch Canvas &amp; In-Place Editing
+              </h3>
+              <p className="text-sm text-zinc-400 leading-relaxed max-w-xl">
+                Switch effortlessly between 10+ responsive blueprints, click any headline or paragraph on the canvas to edit directly, test mobile and tablet hardware frames, and toggle between dots, blueprint grids, isometric matrices, and custom studio backdrops.
               </p>
             </div>
+            <div className="pt-4 border-t border-zinc-800/80 flex items-center justify-between text-xs text-zinc-400">
+              <span className="font-mono">Zoom 40%–200% · Undo/Redo History</span>
+              <button
+                type="button"
+                onClick={() => onNavigate('builder')}
+                className="text-zinc-200 hover:text-white font-medium flex items-center gap-1 cursor-pointer"
+              >
+                <span>Open Builder</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
 
-            <div className="bg-slate-950 p-6 rounded-2xl border border-slate-850 space-y-3">
-              <span className="text-2xl">🎨</span>
-              <h4 className="text-sm font-bold text-white">Designers &amp; Art Directors</h4>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Generate high-resolution image prompts with exact camera focal lengths, lighting atmospheres, and aspect ratios for Midjourney and Canva.
+          {/* Capability 02 */}
+          <div className="md:col-span-5 bg-zinc-900/50 border border-zinc-800 rounded-xl p-6 sm:p-8 flex flex-col justify-between space-y-6">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-xs text-zinc-400 font-mono">
+                <span>02. Identity &amp; 3D Marks</span>
+                <Box className="w-4 h-4 text-zinc-500" />
+              </div>
+              <h3 className="font-display text-xl font-semibold text-zinc-50">
+                Brand Kit &amp; Procedural Three.js Logos
+              </h3>
+              <p className="text-sm text-zinc-400 leading-relaxed">
+                Generate 7-shade WCAG AA palettes, Google Fonts pairings, and interactive 3D PBR logo geometry that can be orbited, exploded, and dropped straight onto your page sections.
               </p>
             </div>
+            <div className="pt-4 border-t border-zinc-800/80 text-xs font-mono text-zinc-400">
+              Studio PBR Materials · Explode Inspector
+            </div>
+          </div>
 
-            <div className="bg-slate-950 p-6 rounded-2xl border border-slate-850 space-y-3">
-              <span className="text-2xl">💻</span>
-              <h4 className="text-sm font-bold text-white">Engineers &amp; Developers</h4>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Export portable HTML code without bloated external frameworks or proprietary build lock-in. Full TypeScript and Tailwind v4 compliance.
+          {/* Capability 03 */}
+          <div className="md:col-span-5 bg-zinc-900/50 border border-zinc-800 rounded-xl p-6 sm:p-8 flex flex-col justify-between space-y-6">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-xs text-zinc-400 font-mono">
+                <span>03. Prompt Workbench</span>
+                <Wand2 className="w-4 h-4 text-zinc-500" />
+              </div>
+              <h3 className="font-display text-xl font-semibold text-zinc-50">
+                Multi-Model Prompt Doctor &amp; Runner
+              </h3>
+              <p className="text-sm text-zinc-400 leading-relaxed">
+                Convert rough notes into structured prompts using XML delimiters, Role-Task-Constraint schemas, and parameterized variables—then execute live against Gemini, Claude, or OpenAI.
               </p>
+            </div>
+            <div className="pt-4 border-t border-zinc-800/80 flex items-center justify-between text-xs text-zinc-400">
+              <span className="font-mono">Live Execution · Local Bookmarks</span>
+              <button
+                type="button"
+                onClick={() => onNavigate('prompt_builder')}
+                className="text-zinc-200 hover:text-white font-medium flex items-center gap-1 cursor-pointer"
+              >
+                <span>Open Workbench</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Capability 04 — Featured Wide */}
+          <div className="md:col-span-7 bg-zinc-900/50 border border-zinc-800 rounded-xl p-6 sm:p-8 flex flex-col justify-between space-y-6">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-xs text-zinc-400 font-mono">
+                <span>04. Visual Image Prompts &amp; Export</span>
+                <Palette className="w-4 h-4 text-zinc-500" />
+              </div>
+              <h3 className="font-display text-xl font-semibold text-zinc-50">
+                4-Way Visual Prompt Expansion &amp; Portable HTML
+              </h3>
+              <p className="text-sm text-zinc-400 leading-relaxed max-w-xl">
+                Specify lens focal length, lighting atmosphere, color grade, and negative exclusions to generate four distinct prompts formatted for Midjourney, DALL-E 3, Flux.1, or Canva—plus 1-click batch export to TXT, Markdown, or JSON.
+              </p>
+            </div>
+            <div className="pt-4 border-t border-zinc-800/80 flex items-center justify-between text-xs text-zinc-400">
+              <span className="font-mono">Midjourney Flags · Standalone index.html</span>
+              <button
+                type="button"
+                onClick={() => onNavigate('settings')}
+                className="text-zinc-200 hover:text-white font-medium flex items-center gap-1 cursor-pointer"
+              >
+                <span>Configure Keys</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 4. QUICK ACTION LAUNCHPAD */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
-        <div className="bg-gradient-to-r from-indigo-950/70 via-purple-950/50 to-slate-900 border border-indigo-500/40 rounded-3xl p-8 sm:p-12 shadow-2xl text-center space-y-6">
-          <h2 className="text-2xl sm:text-4xl font-extrabold text-white">
-            Ready to Start Building?
-          </h2>
-          <p className="max-w-2xl mx-auto text-xs sm:text-sm text-slate-300 leading-relaxed">
-            Choose your starting workflow below. Everything runs seamlessly in your browser with zero setup required.
-          </p>
+      {/* 3. WORKFLOW MATRIX */}
+      <section className="border-y border-zinc-900 bg-zinc-900/20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="space-y-2 border-t border-zinc-800 pt-5">
+              <div className="text-xs font-mono text-zinc-500">Founders &amp; Solo Builders</div>
+              <h3 className="font-display text-base font-semibold text-zinc-100">
+                From Idea to Shipped Page
+              </h3>
+              <p className="text-sm text-zinc-400 leading-relaxed">
+                Pick a structural archetype, customize sections inline, sync real GitHub repositories, and download a single portable HTML file ready for Vercel or Netlify.
+              </p>
+            </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto pt-2">
+            <div className="space-y-2 border-t border-zinc-800 pt-5">
+              <div className="text-xs font-mono text-zinc-500">Designers &amp; Art Directors</div>
+              <h3 className="font-display text-base font-semibold text-zinc-100">
+                Consistent Visual Direction
+              </h3>
+              <p className="text-sm text-zinc-400 leading-relaxed">
+                Test contrast palettes and Google Font pairings live, inspect interactive 3D geometry, and export batch image prompt sheets with exact camera optics.
+              </p>
+            </div>
+
+            <div className="space-y-2 border-t border-zinc-800 pt-5">
+              <div className="text-xs font-mono text-zinc-500">Engineers &amp; Technical Writers</div>
+              <h3 className="font-display text-base font-semibold text-zinc-100">
+                Multi-Model Prompt Testing
+              </h3>
+              <p className="text-sm text-zinc-400 leading-relaxed">
+                Bring your own Gemini, Anthropic Claude, or OpenAI keys stored strictly in browser localStorage and verify prompt outputs with real latency readouts.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 4. BOTTOM ACTION BAND */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="border border-zinc-800 bg-zinc-900/40 rounded-xl p-8 sm:p-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="space-y-2 max-w-xl">
+            <h2 className="font-display text-2xl font-bold text-zinc-50">
+              Start in the studio right away
+            </h2>
+            <p className="text-sm text-zinc-400">
+              Open the responsive website builder immediately, or connect your API keys in Settings to enable multi-model generation.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-3 shrink-0">
             <button
+              type="button"
               onClick={() => onNavigate('builder')}
-              className="p-4 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-lg flex flex-col items-center gap-2 transition-all cursor-pointer"
+              className="px-5 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm transition-colors flex items-center gap-2 cursor-pointer whitespace-nowrap"
             >
-              <Globe className="w-5 h-5" />
+              <Download className="w-4 h-4" />
               <span>Launch Website Studio</span>
-              <span className="text-[10px] text-indigo-200 font-normal">Live builder + templates</span>
             </button>
-
             <button
-              onClick={() => onNavigate('prompt_builder')}
-              className="p-4 rounded-2xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-lg flex flex-col items-center gap-2 transition-all cursor-pointer"
-            >
-              <Palette className="w-5 h-5" />
-              <span>Image Prompt Generator</span>
-              <span className="text-[10px] text-purple-200 font-normal">Midjourney • DALL-E • Flux</span>
-            </button>
-
-            <button
+              type="button"
               onClick={() => onNavigate('settings')}
-              className="p-4 rounded-2xl bg-slate-900 hover:bg-slate-800 text-slate-200 hover:text-white border border-slate-700 font-semibold text-xs flex flex-col items-center gap-2 transition-all cursor-pointer"
+              className="px-4 py-2.5 rounded-lg bg-zinc-950 hover:bg-zinc-900 text-zinc-200 border border-zinc-800 font-medium text-sm transition-colors cursor-pointer whitespace-nowrap"
             >
-              <Cpu className="w-5 h-5 text-indigo-400" />
-              <span>Configure AI Settings</span>
-              <span className="text-[10px] text-slate-400 font-normal">Gemini, Claude &amp; OpenAI</span>
+              AI Settings
             </button>
           </div>
         </div>
       </section>
 
-      {/* 5. FOOTER */}
-      <footer className="border-t border-slate-900 py-8 px-4 text-center text-xs text-slate-500 space-y-2">
-        <div className="flex items-center justify-center gap-2 font-semibold text-slate-400">
-          <Sparkles className="w-4 h-4 text-purple-400" />
-          <span>SiteCraft Studio</span>
-          <span>•</span>
-          <span>Google AI Studio Build Edition</span>
+      {/* 5. QUIET FOOTER */}
+      <footer className="border-t border-zinc-900 py-8 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-zinc-500">
+          <div className="flex items-center gap-3">
+            <span className="font-display font-semibold text-zinc-300">SiteCraft</span>
+            <span aria-hidden="true">·</span>
+            <span>Website Builder &amp; Prompt Workbench</span>
+          </div>
+          <div className="flex items-center gap-6">
+            <button type="button" onClick={() => onNavigate('builder')} className="hover:text-zinc-300 cursor-pointer">
+              Website Studio
+            </button>
+            <button type="button" onClick={() => onNavigate('prompt_builder')} className="hover:text-zinc-300 cursor-pointer">
+              Prompt Studio
+            </button>
+            <button type="button" onClick={() => onNavigate('settings')} className="hover:text-zinc-300 cursor-pointer">
+              Settings
+            </button>
+          </div>
         </div>
-        <p>Built with React, TypeScript, Tailwind CSS, Three.js, and Gemini 3.8 Flash.</p>
       </footer>
     </div>
   );

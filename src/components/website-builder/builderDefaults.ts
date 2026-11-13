@@ -115,10 +115,9 @@ export const PALETTES: Palette[] = [
 ];
 
 export const GOOGLE_FONTS = [
-  'Inter',
-  'Poppins',
-  'Space Grotesk',
   'DM Sans',
+  'Plus Jakarta Sans',
+  'Bricolage Grotesque',
   'Manrope',
   'Sora',
   'Outfit',
@@ -167,7 +166,7 @@ export const COPY_DATABASE: Record<string, any> = {
   webdev: {
     role: 'Frontend Web Developer',
     hero: {
-      eyebrow: "Hi, I'm {first} 👋",
+      eyebrow: "Hi, I'm {first}",
       title: 'I build fast, accessible websites people love.',
       subtitle:
         'Frontend developer crafting pixel-perfect interfaces with HTML, CSS, JavaScript and React.',
@@ -196,9 +195,9 @@ export const COPY_DATABASE: Record<string, any> = {
       'Vite',
     ],
     services: [
-      ['🖥️', 'Landing pages', 'Conversion-focused, lightning-fast marketing pages.'],
-      ['⚛️', 'React apps', 'Component-driven single page applications.'],
-      ['♿', 'Accessibility audits', 'WCAG reviews and fixes for existing sites.'],
+      ['01', 'Landing pages', 'Conversion-focused, fast-loading product and marketing pages.'],
+      ['02', 'React apps', 'Component-driven single page applications built for scale.'],
+      ['03', 'Accessibility audits', 'WCAG reviews and remediation for production codebases.'],
     ],
     projects: [
       [
@@ -275,9 +274,9 @@ export const COPY_DATABASE: Record<string, any> = {
       'Accessibility',
     ],
     services: [
-      ['🔍', 'UX research', 'Interviews, surveys and usability testing that reveal real needs.'],
-      ['🎨', 'UI design', 'Beautiful, consistent interfaces for web and mobile.'],
-      ['🧩', 'Design systems', 'Scalable component libraries and design tokens.'],
+      ['01', 'UX research', 'Interviews, surveys and usability testing that reveal real needs.'],
+      ['02', 'UI design', 'Clear, consistent interfaces for web and mobile products.'],
+      ['03', 'Design systems', 'Scalable component libraries and semantic design tokens.'],
     ],
     projects: [
       [
@@ -347,9 +346,9 @@ export const COPY_DATABASE: Record<string, any> = {
       ['GraphQL', 74],
     ],
     services: [
-      ['⚙️', 'API development', 'Secure, documented REST and GraphQL backends.'],
-      ['🌐', 'Web applications', 'End-to-end SaaS products built to scale.'],
-      ['☁️', 'Cloud & DevOps', 'CI/CD pipelines, containers and monitoring.'],
+      ['01', 'API development', 'Secure, documented REST and GraphQL backends.'],
+      ['02', 'Web applications', 'End-to-end SaaS products built to scale.'],
+      ['03', 'Cloud & DevOps', 'CI/CD pipelines, containers and telemetry.'],
     ],
     projects: [
       [
@@ -419,9 +418,9 @@ export const COPY_DATABASE: Record<string, any> = {
       ['Docker / K8s', 78],
     ],
     services: [
-      ['☕', 'Spring Boot services', 'Production-ready REST APIs and microservices.'],
-      ['🔁', 'Event-driven systems', 'Kafka and messaging architectures that scale.'],
-      ['🧪', 'Legacy modernisation', 'Migrate monoliths to clean, tested services.'],
+      ['01', 'Spring Boot services', 'Production-ready REST APIs and microservices.'],
+      ['02', 'Event-driven systems', 'Kafka and messaging architectures that scale.'],
+      ['03', 'Legacy modernisation', 'Migrate monoliths to clean, tested services.'],
     ],
     projects: [
       [
@@ -579,8 +578,8 @@ export const TEMPLATE_PRESETS: TemplatePreset[] = [
     copy: 'webdev',
     theme: {
       palette: getPalette('midnight'),
-      fontH: 'Space Grotesk',
-      fontB: 'Inter',
+      fontH: 'Plus Jakarta Sans',
+      fontB: 'DM Sans',
       radius: 14,
       density: 'cozy',
     },
@@ -630,7 +629,7 @@ export const TEMPLATE_PRESETS: TemplatePreset[] = [
     theme: {
       palette: getPalette('violet'),
       fontH: 'Sora',
-      fontB: 'Inter',
+      fontB: 'DM Sans',
       radius: 18,
       density: 'cozy',
     },
@@ -680,7 +679,7 @@ export const TEMPLATE_PRESETS: TemplatePreset[] = [
     theme: {
       palette: getPalette('midnight'),
       fontH: 'Sora',
-      fontB: 'Inter',
+      fontB: 'DM Sans',
       radius: 18,
       density: 'cozy',
     },
@@ -721,7 +720,7 @@ export const TEMPLATE_PRESETS: TemplatePreset[] = [
     theme: {
       palette: getPalette('ocean'),
       fontH: 'Outfit',
-      fontB: 'Inter',
+      fontB: 'Plus Jakarta Sans',
       radius: 12,
       density: 'cozy',
     },
@@ -870,9 +869,9 @@ export function createInitialSection(
   } else if (type === 'video') {
     data = {
       title: 'Project Reel',
-      subtitle: 'Watch a 2-minute walkthrough of recent UI interactions and architecture.',
-      url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-      caption: 'Full demo walkthrough with live code annotations.',
+      subtitle: 'Watch a walkthrough of recent UI interactions and system architecture.',
+      url: '',
+      caption: 'Paste a YouTube or Vimeo link in the Inspector to embed a video reel.',
     };
   } else if (type === 'canvas') {
     data = {
