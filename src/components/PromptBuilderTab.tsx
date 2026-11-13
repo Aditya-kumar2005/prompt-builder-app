@@ -20,7 +20,7 @@ import {
   Cpu,
   AlertCircle,
 } from "lucide-react";
-import { AISettings, PromptCategory, CraftedPrompt, getActiveCredential } from "../types/ai";
+import { AISettings, PromptCategory, CraftedPrompt, getActiveCredential, safeFetchJson } from "../types/ai";
 import { ImagePromptGeneratorApp } from "./ImagePromptGeneratorApp";
 
 interface PromptBuilderTabProps {
@@ -160,7 +160,7 @@ export const PromptBuilderTab: React.FC<PromptBuilderTabProps> = ({
     setExecutionOutput(null);
 
     try {
-      const resp = await fetch("/api/prompt-craft", {
+      const { ok, data } = await safeFetchJson("/api/prompt-craft", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -180,10 +180,8 @@ export const PromptBuilderTab: React.FC<PromptBuilderTabProps> = ({
         }),
       });
 
-      const data = await resp.json();
-
-      if (!resp.ok || !data.success) {
-        throw new Error(data.error || "Failed to craft prompt.");
+      if (!ok || !data?.success) {
+        throw new Error(data?.error || "Failed to craft prompt.");
       }
 
       setCraftedResult(data.crafted);
@@ -230,7 +228,7 @@ export const PromptBuilderTab: React.FC<PromptBuilderTabProps> = ({
     const startTime = Date.now();
 
     try {
-      const resp = await fetch("/api/prompt-execute", {
+      const { ok, data } = await safeFetchJson("/api/prompt-execute", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -243,11 +241,10 @@ export const PromptBuilderTab: React.FC<PromptBuilderTabProps> = ({
         }),
       });
 
-      const data = await resp.json();
       setExecutionTimeMs(Date.now() - startTime);
 
-      if (!resp.ok || !data.success) {
-        throw new Error(data.error || "Model execution failed.");
+      if (!ok || !data?.success) {
+        throw new Error(data?.error || "Model execution failed.");
       }
 
       setExecutionOutput(data.output);

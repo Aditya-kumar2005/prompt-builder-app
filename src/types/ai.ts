@@ -26,20 +26,25 @@ export const DEFAULT_AI_SETTINGS: AISettings = {
 
 export const PROVIDER_MODELS: Record<AIProvider, { id: string; name: string; description: string; badge?: string }[]> = {
   gemini: [
-    { id: "gemini-4-hydrogen", name: "Gemini 4 Hydrogen", description: "High-speed flagship for general generation, copywriting & JSON workflows", badge: "Recommended" },
-    { id: "gemini-4-argon", name: "Gemini 4 Argon", description: "Complex reasoning, architecture & code generation", badge: "Pro" },
-    { id: "gemini-4-carbon", name: "Gemini 4 Carbon", description: "Deep multi-step architectural reasoning", badge: "Deep" },
-    { id: "gemini-3.1-flash-lite", name: "Gemini 3.1 Flash Lite", description: "Lowest latency for rapid iterations" },
+    { id: "gemini-4-hydrogen", name: "Gemini 4 Hydrogen", description: "Fast flagship model for copywriting, site editing & JSON workflows (Free Tier eligible)", badge: "Free / Recommended" },
+    { id: "gemini-3.1-flash-lite", name: "Gemini 3.1 Flash Lite", description: "Ultra-lightweight low-latency model with generous free-tier rate limits", badge: "Free / Low Tier" },
+    { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash", description: "Freely available standard model on Google AI Studio API keys", badge: "Free Tier" },
+    { id: "gemini-2.5-flash-lite", name: "Gemini 2.5 Flash-Lite", description: "Lowest-cost, lightweight free-tier model for fast prompts & drafts", badge: "Free / Lowest" },
+    { id: "gemini-4-argon", name: "Gemini 4 Argon", description: "Complex reasoning, architecture & code generation (Paid Key)", badge: "Pro" },
+    { id: "gemini-4-carbon", name: "Gemini 4 Carbon", description: "Deep multi-step architectural reasoning (Paid Key)", badge: "Deep" },
   ],
   claude: [
     { id: "claude-sonnet-4-20250514", name: "Claude Sonnet 4", description: "Balanced reasoning, XML scaffolding, and precision instruction adherence", badge: "Recommended" },
     { id: "claude-3-7-sonnet-20250219", name: "Claude 3.7 Sonnet", description: "Structured engineering copy and code synthesis" },
-    { id: "claude-3-5-haiku-20241022", name: "Claude 3.5 Haiku", description: "Fast responses for prompt refinement" },
+    { id: "claude-3-5-haiku-20241022", name: "Claude 3.5 Haiku", description: "Fast, low-cost model for prompt refinement", badge: "Low Cost" },
+    { id: "claude-3-haiku-20240307", name: "Claude 3 Haiku", description: "Entry-level lightweight Anthropic model with lowest token cost", badge: "Lowest Tier" },
   ],
   openai: [
     { id: "gpt-4o", name: "GPT-4o", description: "Multimodal flagship for JSON schemas and prompt craft", badge: "Recommended" },
     { id: "gpt-4.1", name: "GPT-4.1", description: "High-precision instruction following and code", badge: "Latest" },
-    { id: "gpt-4o-mini", name: "GPT-4o Mini", description: "Fast and cost-efficient" },
+    { id: "gpt-4.1-mini", name: "GPT-4.1 Mini", description: "Fast, compact model for everyday prompt workflows", badge: "Low Cost" },
+    { id: "gpt-4o-mini", name: "GPT-4o Mini", description: "Compact & economical everyday GPT model", badge: "Low Cost" },
+    { id: "gpt-4.1-nano", name: "GPT-4.1 Nano", description: "Smallest, fastest, lowest-cost OpenAI model for light tasks", badge: "Lowest Tier" },
     { id: "o3-mini", name: "o3-mini", description: "Dedicated reasoning model for complex constraints" },
   ],
 };
@@ -136,3 +141,38 @@ export interface CraftedPrompt {
   whyItWorks: string[];
   proTips: string[];
 }
+
+/**
+ * Safely fetches an API endpoint and parses JSON without throwing raw SyntaxError
+ * if a serverless host, proxy, or CDN returns plain-text or HTML error pages.
+ */
+export async function safeFetchJson<T = any>(
+  url: string,
+  init?: RequestInit
+): Promise<{ ok: boolean; status: number; data: T }> {
+  const resp = await fetch(url, init);
+  const rawText = await resp.text();
+  const trimmed = rawText.trim();
+
+  if (!trimmed) {
+    throw new Error(`Empty response from API (${resp.status} ${resp.statusText || "Error"}).`);
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed) as T;
+    return { ok: resp.ok, status: resp.status, data: parsed };
+  } catch {
+    if (/^a server error has occurred/i.test(trimmed) || /FUNCTION_INVOCATION_FAILED/i.test(trimmed)) {
+      throw new Error(
+        `Serverless API error (HTTP ${resp.status}). Ensure your latest code is deployed and check API environment variables.`
+      );
+    }
+    if (trimmed.startsWith("<!DOCTYPE") || trimmed.startsWith("<html")) {
+      throw new Error(
+        `API returned an HTML page instead of JSON (HTTP ${resp.status}). Check deployment routing for ${url}.`
+      );
+    }
+    throw new Error(`Server returned non-JSON response (HTTP ${resp.status}): ${trimmed.slice(0, 140)}`);
+  }
+}
+

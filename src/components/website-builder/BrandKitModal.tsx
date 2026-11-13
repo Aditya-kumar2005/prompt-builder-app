@@ -5,7 +5,7 @@
  */
 import React, { useState } from 'react';
 import { SiteProject } from './builderTypes';
-import { AISettings, getActiveCredential } from '../../types/ai';
+import { AISettings, getActiveCredential, safeFetchJson } from '../../types/ai';
 import { ThreeLogoViewer, Procedural3DLogoData } from './ThreeLogoViewer';
 import {
   AlertCircle,
@@ -109,7 +109,7 @@ export const BrandKitModal: React.FC<BrandKitModalProps> = ({
     setErrorMsg(null);
 
     try {
-      const response = await fetch('/api/brand-generator', {
+      const { ok, data } = await safeFetchJson('/api/brand-generator', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -123,9 +123,8 @@ export const BrandKitModal: React.FC<BrandKitModalProps> = ({
         }),
       });
 
-      const data = await response.json();
-      if (!response.ok || !data.success || !data.brandKit) {
-        throw new Error(data.error || 'Failed to generate brand kit.');
+      if (!ok || !data?.success || !data?.brandKit) {
+        throw new Error(data?.error || 'Failed to generate brand kit.');
       }
 
       setBrandKit(data.brandKit);

@@ -11,7 +11,7 @@ import {
   Trash2,
   AlertCircle,
 } from "lucide-react";
-import { AISettings, AIProvider, PROVIDER_MODELS, cleanClientApiKey } from "../types/ai";
+import { AISettings, AIProvider, PROVIDER_MODELS, cleanClientApiKey, safeFetchJson } from "../types/ai";
 
 interface SettingsTabProps {
   settings: AISettings;
@@ -56,7 +56,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     }
 
     try {
-      const resp = await fetch("/api/test-connection", {
+      const { ok, data } = await safeFetchJson("/api/test-connection", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -66,9 +66,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         }),
       });
 
-      const data = await resp.json();
-
-      if (resp.ok && data.success) {
+      if (ok && data?.success) {
         setTestResult({
           provider,
           success: true,
@@ -168,7 +166,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               title: "Google Gemini",
               desc: "Multimodal generation, structured JSON outputs, and low-latency prompt crafting.",
               keySet: Boolean(settings.geminiKey.trim()),
-              emptyStatus: "API key recommended",
+              emptyStatus: "Free tier available",
               modelLabel: settings.geminiModel,
             },
             {
@@ -257,6 +255,9 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               </select>
               <p className="text-[11px] text-zinc-500">
                 {PROVIDER_MODELS.gemini.find(m => m.id === settings.geminiModel)?.description}
+              </p>
+              <p className="text-[10px] text-emerald-400/90">
+                Free keys at aistudio.google.com support Hydrogen, 3.1 Flash Lite, 2.5 Flash &amp; 2.5 Flash-Lite without billing.
               </p>
             </div>
 

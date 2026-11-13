@@ -12,7 +12,7 @@ import {
   TEMPLATE_PRESETS,
   createProjectFromTemplate,
 } from './builderDefaults';
-import { AISettings, getActiveCredential } from '../../types/ai';
+import { AISettings, getActiveCredential, safeFetchJson } from '../../types/ai';
 import { AvatarConfig, DEFAULT_AVATAR, startAvatar } from './scFxRuntime';
 import {
   AlertCircle,
@@ -107,7 +107,7 @@ export const SiteLayers: React.FC<SiteLayersProps> = ({
     setAiError(null);
 
     try {
-      const response = await fetch('/api/site-generate', {
+      const { ok, data: result } = await safeFetchJson('/api/site-generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -122,9 +122,8 @@ export const SiteLayers: React.FC<SiteLayersProps> = ({
         }),
       });
 
-      const result = await response.json();
-      if (!response.ok || !result.success || !result.siteCopy) {
-        throw new Error(result.error || 'Site copy generation failed.');
+      if (!ok || !result?.success || !result?.siteCopy) {
+        throw new Error(result?.error || 'Site copy generation failed.');
       }
 
       const newProj = createProjectFromTemplate(aiRole, {

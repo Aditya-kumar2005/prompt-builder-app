@@ -14,7 +14,7 @@ import {
   createInitialSection,
   createProjectFromTemplate,
 } from './builderDefaults';
-import { AISettings, getActiveCredential } from '../../types/ai';
+import { AISettings, getActiveCredential, safeFetchJson } from '../../types/ai';
 import { SiteCanvas } from './SiteCanvas';
 import { SiteLayers } from './SiteLayers';
 import { SiteInspector } from './SiteInspector';
@@ -296,7 +296,7 @@ export const WebsiteBuilderTab: React.FC<WebsiteBuilderTabProps> = ({
     triggerToast(`Refining ${activeSec.type} copy via ${cred.provider.toUpperCase()}...`, 'info');
 
     try {
-      const response = await fetch('/api/section-polish', {
+      const { ok, data } = await safeFetchJson('/api/section-polish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -311,9 +311,8 @@ export const WebsiteBuilderTab: React.FC<WebsiteBuilderTabProps> = ({
         }),
       });
 
-      const data = await response.json();
-      if (!response.ok || !data.success || !data.updatedData) {
-        throw new Error(data.error || 'Failed to polish section copy.');
+      if (!ok || !data?.success || !data?.updatedData) {
+        throw new Error(data?.error || 'Failed to polish section copy.');
       }
 
       updateProjectWithHistory(prev => ({

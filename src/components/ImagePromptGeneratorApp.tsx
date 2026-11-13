@@ -20,7 +20,7 @@ import {
   Sun,
   Wand2,
 } from 'lucide-react';
-import { AISettings, getActiveCredential } from '../types/ai';
+import { AISettings, getActiveCredential, safeFetchJson } from '../types/ai';
 
 interface ImagePromptGeneratorAppProps {
   settings: AISettings;
@@ -177,7 +177,7 @@ export const ImagePromptGeneratorApp: React.FC<ImagePromptGeneratorAppProps> = (
     setErrorMsg(null);
 
     try {
-      const resp = await fetch('/api/image-prompt-craft', {
+      const { ok, data: res } = await safeFetchJson('/api/image-prompt-craft', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -197,9 +197,8 @@ export const ImagePromptGeneratorApp: React.FC<ImagePromptGeneratorAppProps> = (
         }),
       });
 
-      const res = await resp.json();
-      if (!resp.ok || !res.success) {
-        throw new Error(res.error || 'Failed to generate image prompts.');
+      if (!ok || !res?.success) {
+        throw new Error(res?.error || 'Failed to generate image prompts.');
       }
 
       setVariations(res.data.variations || []);
